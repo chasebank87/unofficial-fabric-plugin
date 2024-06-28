@@ -1,0 +1,226 @@
+.fabric-view {
+  padding: 20px;
+  background-color: var(--background-primary);
+  border-left: 1px solid var(--border-color);
+}
+
+.fabric-logo-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.fabric-logo {
+  max-width: 100px;
+  height: auto;
+  max-height: 450px;
+}
+
+.fabric-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: var(--text-normal);
+}
+
+.fabric-content {
+  background-color: var(--background-secondary);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 550px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.fabric-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  width: 80%;
+  max-width: 450px;
+}
+
+.fabric-button {
+  flex: 1;
+  padding: 15px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  margin: 0 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.fabric-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.fabric-button:hover::before {
+  width: 200%;
+  height: 200%;
+}
+
+.fabric-button:first-child {
+  margin-left: 0;
+}
+
+.fabric-button:last-child {
+  margin-right: 0;
+}
+
+.fabric-button:hover {
+  background-color: var(--interactive-accent-hover);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.fabric-button.clipboard {
+  background: linear-gradient(to right, #6B3FA0, #4C7FD2);
+  transition: background 0.3s ease;
+  margin: 0 0px;
+  position: relative;
+  overflow: hidden;
+}
+
+.fabric-button.clipboard:hover::before {
+  width: 200%;
+  height: 200%;
+}
+
+.fabric-button.clipboard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.fabric-button.current-note:hover::before {
+  width: 200%;
+  height: 200%;
+}
+
+.fabric-button.current-note {
+  background: rgb(60, 62, 149);
+  position: relative;
+  overflow: hidden;
+}
+
+.fabric-button.clipboard:hover {
+  box-shadow: 0 0 10px rgba(107, 63, 160, 0.5), 0 0 20px rgba(76, 127, 210, 0.5);
+}
+
+.fabric-button.current-note:hover {
+  box-shadow: 0 0 10px rgba(63, 42, 86, 0.5), 0 0 20px rgba(46, 80, 119, 0.5);
+}
+
+.fabric-inputs-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.fabric-input {
+  width: 80%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  transition: box-shadow 0.3s ease;
+  margin: 0 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 450px;
+}
+
+.fabric-input.active {
+  box-shadow: 0 0 10px rgba(107, 63, 160, 0.5), 0 0 20px rgba(76, 127, 210, 0.5);
+}
+
+.fabric-dropdown-input,
+.fabric-output-note-input {
+  width: 80%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  transition: box-shadow 0.3s ease;
+  margin: 0 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 450px;
+}
+
+.fabric-dropdown-input.active,
+.fabric-output-note-input.active {
+  box-shadow: 0 0 10px rgba(107, 63, 160, 0.5), 0 0 20px rgba(76, 127, 210, 0.5);
+}
+
+.fabric-dropdown {
+  width: 80%;
+  max-height: 200px;
+  max-width: 450px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  margin-top: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fabric-dropdown-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  background-color: var(--background-primary);
+  border-radius: 5px;
+  width: 100%;
+  max-width: 450px;
+}
+
+.fabric-dropdown-option.selected {
+  background: linear-gradient(to right, #6B3FA0, #4C7FD2);
+  color: var(--text-on-accent);
+}
+
+.fabric-progress-spinner {
+  border: 4px solid var(--border-color);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 2s linear infinite;
+  display: none;
+  margin: 0 auto;
+}
+
+.fabric-progress-spinner.active {
+  display: visible;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

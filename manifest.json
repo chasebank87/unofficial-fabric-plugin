@@ -1,0 +1,11 @@
+{
+  "id": "fabric-plugin",
+  "name": "Fabric Integration",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Integrates Fabric with Obsidian",
+  "author": "Your Name",
+  "authorUrl": "https://github.com/yourusername",
+  "isDesktopOnly": false,
+  "css": "styles.css"
+}

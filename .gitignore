@@ -1,0 +1,9 @@
+# Ignore built files
+main.js
+*.js.map
+
+# Ignore node_modules
+node_modules/
+
+# Ignore macOS system files
+.DS_Store
