@@ -7,6 +7,6 @@
   "author": "Chasebank87",
   "authorUrl": "https://chaseelder.com",
 	"fundingUrl": "https://github.com/chasebank87/unofficial-fabric-plugin.git",
-  "isDesktopOnly": false,
+  "isDesktopOnly": true,
   "css": "styles.css"
 }
