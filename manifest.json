@@ -1,11 +1,12 @@
 {
-  "id": "fabric-plugin",
-  "name": "Fabric Integration",
+  "id": "unofficial-fabric-plugin",
+  "name": "Unofficial Fabric Plugin",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
   "description": "Integrates Fabric with Obsidian",
-  "author": "Your Name",
-  "authorUrl": "https://github.com/yourusername",
+  "author": "Chasebank87",
+  "authorUrl": "https://chaseelder.com",
+	"fundingUrl": "https://github.com/chasebank87/import-github-readme.git",
   "isDesktopOnly": false,
   "css": "styles.css"
 }
