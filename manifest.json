@@ -6,7 +6,7 @@
   "description": "Integrates Fabric with Obsidian",
   "author": "Chasebank87",
   "authorUrl": "https://chaseelder.com",
-	"fundingUrl": "https://github.com/chasebank87/import-github-readme.git",
+	"fundingUrl": "https://github.com/chasebank87/unofficial-fabric-plugin.git",
   "isDesktopOnly": false,
   "css": "styles.css"
 }
