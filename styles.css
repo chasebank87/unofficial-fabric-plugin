@@ -6,13 +6,69 @@
 
 .fabric-logo-container {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 50px;
+  position: relative;
 }
+
+@keyframes pulse {
+  0% {
+      transform: scale(.95);
+      opacity: 0.7;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(.95);
+    opacity: 0.7;
+  }
+  75% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(.95);
+    opacity: 0.7;
+  }
+}
+
+.fabric-logo-container.loading .fabric-logo {
+  animation: pulse 4s infinite ease-in-out;
+}
+.fabric-loading-text {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.fabric-logo-container.loading .fabric-loading-text {
+  opacity: 1;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.fabric-loading-text::after {
+  content: '|';
+  animation: blink 1s infinite;
+  margin-left: 2px;
+}
+
 
 .fabric-logo {
   max-width: 100px;
   height: auto;
   max-height: 450px;
+  transition: all 0.3s ease;
 }
 
 .fabric-title {

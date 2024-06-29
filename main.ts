@@ -144,6 +144,21 @@ class FabricView extends ItemView {
   patternsSyncButton: HTMLElement;
   containerEl: HTMLElement;
   refreshButton: HTMLElement;
+  logoContainer: HTMLElement;
+  loadingText: HTMLElement;
+
+  loadingMessages: string[] = [
+    "reticulating splines...",
+    "engaging warp drive...",
+    "calibrating flux capacitor...",
+    "compiling techno-babble...",
+    "reversing the polarity...",
+    "bypassing the mainframe...",
+    "initializing neural network...",
+    "decrypting alien transmissions...",
+    "charging photon torpedoes...",
+    "hacking the gibson..."
+  ];
 
   constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin) {
       super(leaf);
@@ -163,11 +178,13 @@ class FabricView extends ItemView {
       this.containerEl.empty();
       this.containerEl.addClass('fabric-view');
 
-      const logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
-      const logo = logoContainer.createEl('img', {
-          cls: 'fabric-logo',
-          attr: { src: 'https://github.com/danielmiessler/fabric/blob/main/images/fabric-logo-gif.gif?raw=true' }
-      });
+      this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
+        const logo = this.logoContainer.createEl('img', {
+            cls: 'fabric-logo',
+            attr: { src: 'https://github.com/danielmiessler/fabric/blob/main/images/fabric-logo-gif.gif?raw=true' }
+        });
+    
+      this.loadingText = this.logoContainer.createEl('div', { cls: 'fabric-loading-text' });
 
       const contentContainer = this.containerEl.createEl('div', { cls: 'fabric-content' });
 
@@ -244,7 +261,7 @@ class FabricView extends ItemView {
         let input = '';
         let pattern = this.searchInput.value.trim();
         let outputNoteName = this.outputNoteInput.value.trim();
-
+        
         if (source === 'current') {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile) {
@@ -259,19 +276,46 @@ class FabricView extends ItemView {
             }
         }
 
-        this.progressSpinner.addClass('active');
+        this.logoContainer.addClass('loading');
+        this.loadingText.setText('');
+        this.animateLoadingText(this.getRandomLoadingMessage());
 
         try {
             const output = await this.plugin.runFabricCommand(`-sp "${pattern}"`, input);
             const newFile = await this.createOutputNote(output, outputNoteName);
-            this.progressSpinner.removeClass('active');
+            this.logoContainer.removeClass('loading');
+            this.loadingText.setText('');
             this.app.workspace.openLinkText(newFile.path, '', true);
             new Notice('Fabric output generated successfully');
         } catch (error) {
             console.error('Failed to run fabric:', error);
-            this.progressSpinner.removeClass('active');
+            this.logoContainer.removeClass('loading');
+            this.loadingText.setText('');
             new Notice('Failed to run fabric. Please check your settings and try again.');
         }
+      }
+  
+      getRandomLoadingMessage(): string {
+        return this.loadingMessages[Math.floor(Math.random() * this.loadingMessages.length)];
+      }
+
+      animateLoadingText(text: string) {
+        let i = 0;
+        const intervalId = setInterval(() => {
+            if (!this.logoContainer.hasClass('loading')) {
+                clearInterval(intervalId);
+                return;
+            }
+            if (i < text.length) {
+                this.loadingText.setText(this.loadingText.getText() + text[i]);
+                i++;
+            } else {
+                setTimeout(() => {
+                    this.loadingText.setText('');
+                    i = 0;
+                }, 1000); // Pause for a second before restarting
+            }
+        }, 100); // Adjust this value to change the typing speed
     }
 
     async createOutputNote(content: string, noteName: string): Promise<TFile> {
