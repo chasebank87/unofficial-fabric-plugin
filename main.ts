@@ -1,9 +1,11 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer, setIcon } from 'obsidian';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import * as os from 'os';
 import * as fuzzaldrin from 'fuzzaldrin-plus';
+
+var shellEscape = require('shell-escape');
 
 const execAsync = promisify(exec);
 
@@ -31,7 +33,7 @@ export default class FabricPlugin extends Plugin {
 
         this.registerView('fabric-view', (leaf) => new FabricView(leaf, this));
 
-        this.addRibbonIcon('dice', 'fabric', () => {
+        this.addRibbonIcon('brain', 'fabric', () => {
             this.activateView();
         });
     }
@@ -82,21 +84,28 @@ export default class FabricPlugin extends Plugin {
         }
     }
 
-    async runFabricCommand(args: string): Promise<string> {
-        try {
-            const shell = await this.getDefaultShell();
-            const command = `"${this.settings.fabricPath}" ${args}`;
-            console.log(`Executing command: ${command}`);
-            const { stdout, stderr } = await execAsync(command, { shell });
-            if (stderr) {
-                console.warn('Fabric command stderr:', stderr);
-            }
-            return stdout.trim();
-        } catch (error) {
-            console.error('Error running fabric command:', error);
-            throw error;
-        }
-    }
+    async runFabricCommand(args: string, input?: string): Promise<string> {
+      try {
+          const shell = await this.getDefaultShell();
+          let command = `"${this.settings.fabricPath}" ${args}`;
+          
+          if (input) {
+              // Escape the input to handle special characters
+              const escapedInput = shellEscape([input]);
+              command += ` --text ${escapedInput}`;
+          }
+
+          console.log(`Executing command: ${command}`);
+          const { stdout, stderr } = await execAsync(command, { shell });
+          if (stderr) {
+              console.warn('Fabric command stderr:', stderr);
+          }
+          return stdout.trim();
+      } catch (error) {
+          console.error('Error running fabric command:', error);
+          throw error;
+      }
+  }
 
     async activateView() {
       const { workspace } = this.app;
@@ -134,6 +143,7 @@ class FabricView extends ItemView {
   patternsSyncContainer: HTMLElement;
   patternsSyncButton: HTMLElement;
   containerEl: HTMLElement;
+  refreshButton: HTMLElement;
 
   constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin) {
       super(leaf);
@@ -170,7 +180,8 @@ class FabricView extends ItemView {
       currentNoteBtn.onclick = () => this.runFabric('current');
       clipboardBtn.onclick = () => this.runFabric('clipboard');
 
-      const inputsContainer = contentContainer.createEl('div', { cls: 'fabric-inputs-container' });
+    const inputsContainer = contentContainer.createEl('div', { cls: 'fabric-inputs-container' });
+    
 
       this.outputNoteInput = inputsContainer.createEl('input', {
           cls: 'fabric-input',
@@ -207,15 +218,29 @@ class FabricView extends ItemView {
       this.outputNoteInput.addEventListener('blur', () => {
           this.outputNoteInput.classList.remove('active');
       });
+    
+      this.refreshButton = contentContainer.createEl('button', {
+        cls: 'fabric-refresh-button',
+        attr: {
+            'aria-label': 'Refresh patterns'
+        }
+      });
+      setIcon(this.refreshButton, 'refresh-cw');
+      this.refreshButton.onclick = async () => {
+          await this.loadPatterns();
+          new Notice('Patterns refreshed');
+      };
 
-      this.progressSpinner = contentContainer.createEl('div', { cls: 'fabric-progress-spinner' });
+
+    this.progressSpinner = contentContainer.createEl('div', { cls: 'fabric-progress-spinner' });
+    
 
       await this.loadPatterns();
       this.updatePatternOptions('');
       this.searchInput.focus();
   }
 
-    async runFabric(source: 'current' | 'clipboard' | 'pattern') {
+      async runFabric(source: 'current' | 'clipboard' | 'pattern') {
         let input = '';
         let pattern = this.searchInput.value.trim();
         let outputNoteName = this.outputNoteInput.value.trim();
@@ -237,7 +262,7 @@ class FabricView extends ItemView {
         this.progressSpinner.addClass('active');
 
         try {
-            const output = await this.plugin.runFabricCommand(`--text "${input}" -sp "${pattern}"`);
+            const output = await this.plugin.runFabricCommand(`-sp "${pattern}"`, input);
             const newFile = await this.createOutputNote(output, outputNoteName);
             this.progressSpinner.removeClass('active');
             this.app.workspace.openLinkText(newFile.path, '', true);
