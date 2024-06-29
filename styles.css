@@ -296,3 +296,10 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.theme-light .fabric-input,
+.theme-light .fabric-dropdown-input,
+.theme-light .fabric-output-note-input,
+.theme-light .fabric-dropdown {
+    color: #ffffff;
+}
