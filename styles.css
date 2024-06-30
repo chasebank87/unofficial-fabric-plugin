@@ -1,3 +1,9 @@
+:root {
+  --dropdown-top-offset: 5px;
+  --dropdown-left-offset: 0;
+  --dropdown-width-offset: 0;
+}
+
 .fabric-view {
   padding: 20px;
   background-color: var(--background-primary);
@@ -81,7 +87,7 @@
 .fabric-content {
   background-color: var(--background-secondary);
   border-radius: 10px;
-  padding: 20px;
+  padding: 20px 20px 50px 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
@@ -113,6 +119,7 @@
   margin-bottom: 10px;
   width: 80%;
   max-width: 450px;
+  min-width: 450px;
 }
 
 .fabric-button {
@@ -212,6 +219,7 @@
   gap: 10px;
   margin-bottom: 10px;
   width: 100%;
+  min-width: 550px;
 }
 
 .fabric-input {
@@ -255,12 +263,16 @@
   max-height: 200px;
   max-width: 450px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scroll-behavior: auto;
   border: 1px solid var(--border-color);
   border-radius: 5px;
   background-color: var(--background-primary);
   color: var(--text-normal);
-  margin-top: 8px;
+  margin-top: 190px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  z-index: 100;
 }
 
 .fabric-dropdown-option {

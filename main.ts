@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fuzzaldrin from 'fuzzaldrin-plus';
 
-var shellEscape = require('shell-escape');
+const shellEscape = require('shell-escape');
 
 const execAsync = promisify(exec);
 
@@ -359,13 +359,6 @@ class FabricView extends ItemView {
             });
             this.selectedOptionIndex = 0;
         }
-
-        const dropdownRect = this.patternDropdown.getBoundingClientRect();
-        const inputRect = this.searchInput.getBoundingClientRect();
-
-        this.patternDropdown.style.top = `${inputRect.bottom}px`;
-        this.patternDropdown.style.left = `${inputRect.left}px`;
-        this.patternDropdown.style.width = `${inputRect.width}px`;
     }
 
     handleDropdownNavigation(event: KeyboardEvent) {
