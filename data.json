@@ -2,6 +2,7 @@
   "fabricPath": "/Users/chase/.local/bin/fabric",
   "ffmpegPath": "/opt/homebrew/bin/ffmpeg",
   "outputFolder": "Fabric Notes",
+  "youtubeAutodetectEnabled": true,
   "patternsSyncFolder": "/Users/chase/Knowledge Base/Fabric Patterns",
   "fabricPatternsFolder": "/Users/chase/.config/fabric/patterns"
 }

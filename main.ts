@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer, setIcon } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal } from 'obsidian';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -6,19 +6,21 @@ import * as os from 'os';
 import * as fuzzaldrin from 'fuzzaldrin-plus';
 
 const shellEscape = require('shell-escape');
-
+const apiURL = 'http://localhost:49152/';
 const execAsync = promisify(exec);
 
 interface FabricPluginSettings {
     fabricPath: string;
     ffmpegPath: string;
     outputFolder: string;
+    youtubeAutodetectEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: FabricPluginSettings = {
     fabricPath: 'fabric',
     ffmpegPath: 'ffmpeg',
-    outputFolder: ''
+    outputFolder: '',
+    youtubeAutodetectEnabled: true
 }
 
 export default class FabricPlugin extends Plugin {
@@ -146,6 +148,8 @@ class FabricView extends ItemView {
   refreshButton: HTMLElement;
   logoContainer: HTMLElement;
   loadingText: HTMLElement;
+  ytSwitch: HTMLInputElement;
+  ytToggle: HTMLElement;
 
   loadingMessages: string[] = [
     "reticulating splines...",
@@ -181,12 +185,29 @@ class FabricView extends ItemView {
       this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
         const logo = this.logoContainer.createEl('img', {
             cls: 'fabric-logo',
-            attr: { src: 'https://github.com/danielmiessler/fabric/blob/main/images/fabric-logo-gif.gif?raw=true' }
+            attr: { 
+                src: this.plugin.app.vault.adapter.getResourcePath(this.plugin.manifest.dir + '/fabric-logo-gif.gif')
+            }
         });
-    
       this.loadingText = this.logoContainer.createEl('div', { cls: 'fabric-loading-text' });
 
       const contentContainer = this.containerEl.createEl('div', { cls: 'fabric-content' });
+
+   // Add YouTube toggle and icon
+   const ytToggleContainer = contentContainer.createEl('div', { cls: 'fabric-yt-toggle-container' });
+    
+   // Create toggle
+   this.ytToggle = ytToggleContainer.createEl('div', { 
+    cls: `fabric-yt-toggle ${this.plugin.settings.youtubeAutodetectEnabled ? 'active' : ''}`
+});
+   const toggleSlider = this.ytToggle.createEl('span', { cls: 'fabric-yt-toggle-slider' });
+   
+    // Create text label
+    const ytLabel = ytToggleContainer.createEl('span', { 
+        cls: 'fabric-yt-label',
+        text: 'Autodetect YouTube Links'
+    });
+
 
       contentContainer.createEl('h3', { text: 'fabric', cls: 'fabric-title' });
 
@@ -235,6 +256,22 @@ class FabricView extends ItemView {
       this.outputNoteInput.addEventListener('blur', () => {
           this.outputNoteInput.classList.remove('active');
       });
+
+      this.ytToggle.addEventListener('click', () => {
+        this.ytToggle.classList.toggle('active');
+        this.plugin.settings.youtubeAutodetectEnabled = this.ytToggle.classList.contains('active');
+        this.plugin.saveSettings();
+        if (this.plugin.settings.youtubeAutodetectEnabled) {
+            new Notice('YouTube link detection enabled');
+        } else {
+            new Notice('YouTube link detection disabled');
+        }
+    });
+      
+    // Modify the click handlers for currentNoteBtn and clipboardBtn
+    currentNoteBtn.onclick = () => this.handleFabricRun('current');
+    clipboardBtn.onclick = () => this.handleFabricRun('clipboard');
+
     
       this.refreshButton = contentContainer.createEl('button', {
         cls: 'fabric-refresh-button',
@@ -257,44 +294,62 @@ class FabricView extends ItemView {
       this.searchInput.focus();
   }
 
-      async runFabric(source: 'current' | 'clipboard' | 'pattern') {
-        let input = '';
-        let pattern = this.searchInput.value.trim();
-        let outputNoteName = this.outputNoteInput.value.trim();
-        
-        if (source === 'current') {
-            const activeFile = this.app.workspace.getActiveFile();
-            if (activeFile) {
-                input = await this.app.vault.read(activeFile);
-            }
-        } else if (source === 'clipboard') {
-            input = await navigator.clipboard.readText();
-        } else if (source === 'pattern') {
-            if (!pattern) {
-                new Notice('Please select a pattern first');
-                return;
-            }
+  async runFabric(source: 'current' | 'clipboard' | 'pattern') {
+    let data = '';
+    let pattern = this.searchInput.value.trim();
+    let outputNoteName = this.outputNoteInput.value.trim();
+    
+    if (source === 'current') {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile) {
+            data = await this.app.vault.read(activeFile);
+        }
+    } else if (source === 'clipboard') {
+        data = await navigator.clipboard.readText();
+    } else if (source === 'pattern') {
+        if (!pattern) {
+            new Notice('Please select a pattern first');
+            return;
+        }
+    }
+
+    this.logoContainer.addClass('loading');
+    this.loadingText.setText('');
+    this.animateLoadingText(this.getRandomLoadingMessage());
+
+    try {
+        const response = await fetch(apiURL + 'fabric', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                pattern: pattern,
+                data: data
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        this.logoContainer.addClass('loading');
+        const responseData = await response.json();
+        const output = responseData.output;
+
+        const newFile = await this.createOutputNote(output, outputNoteName);
+        this.logoContainer.removeClass('loading');
         this.loadingText.setText('');
-        this.animateLoadingText(this.getRandomLoadingMessage());
+        this.app.workspace.openLinkText(newFile.path, '', true);
+        new Notice('Fabric output generated successfully');
+    } catch (error) {
+        console.error('Failed to run fabric:', error);
+        this.logoContainer.removeClass('loading');
+        this.loadingText.setText('');
+        new Notice('Failed to run fabric. Please check your settings and try again.');
+    }
+}
 
-        try {
-            const output = await this.plugin.runFabricCommand(`-sp "${pattern}"`, input);
-            const newFile = await this.createOutputNote(output, outputNoteName);
-            this.logoContainer.removeClass('loading');
-            this.loadingText.setText('');
-            this.app.workspace.openLinkText(newFile.path, '', true);
-            new Notice('Fabric output generated successfully');
-        } catch (error) {
-            console.error('Failed to run fabric:', error);
-            this.logoContainer.removeClass('loading');
-            this.loadingText.setText('');
-            new Notice('Failed to run fabric. Please check your settings and try again.');
-        }
-      }
-  
       getRandomLoadingMessage(): string {
         return this.loadingMessages[Math.floor(Math.random() * this.loadingMessages.length)];
       }
@@ -408,13 +463,170 @@ class FabricView extends ItemView {
 
     async loadPatterns() {
         try {
-            const output = await this.plugin.runFabricCommand('--list');
-            this.patterns = output.split('\n').filter(Boolean);
+            const response = await fetch(apiURL + 'patterns');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            
+            // Extract pattern names from the JSON structure
+            this.patterns = data.data.patterns.map((pattern: { name: any; }) => pattern.name);
+            
+            console.log('Patterns loaded:', this.patterns);
         } catch (error) {
-            console.error('Failed to load fabric patterns:', error);
-            new Notice('Failed to load fabric patterns. Please check your fabric installation.');
+            console.error('Failed to load patterns from API:', error);
+            new Notice('Failed to load patterns. Please check the API server.');
         }
     }
+
+    async handleFabricRun(source: 'current' | 'clipboard') {
+        if (this.ytToggle.classList.contains('active')) {
+            const links = await this.extractYouTubeLinks(source);
+            if (links.length > 0) {
+                this.showYouTubeModal(links, source);
+            } else {
+                new Notice('No YouTube links found. Running Fabric normally.');
+                this.runFabric(source);
+            }
+        } else {
+            this.runFabric(source);
+        }
+    }
+
+    async extractYouTubeLinks(source: 'current' | 'clipboard'): Promise<string[]> {
+        let text = '';
+        if (source === 'current') {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) {
+                text = await this.app.vault.read(activeFile);
+            }
+        } else {
+            text = await navigator.clipboard.readText();
+        }
+        const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(?:embed\/)?(?:v\/)?(?:shorts\/)?(?:\S+)/g;
+        return text.match(youtubeRegex) || [];
+    }
+
+    showYouTubeModal(links: string[], source: 'current' | 'clipboard') {
+        const modal = new Modal(this.app);
+        modal.titleEl.setText('Select YouTube Link');
+        const { contentEl } = modal;
+    
+        let selectedIndex = 0;
+    
+        const linkList = contentEl.createEl('div', { cls: 'fabric-yt-link-list' });
+    
+        const updateSelection = () => {
+            linkList.querySelectorAll('.fabric-yt-link').forEach((el, index) => {
+                el.classList.toggle('is-selected', index === selectedIndex);
+            });
+        };
+    
+        links.forEach((link, index) => {
+            const linkEl = linkList.createEl('div', { cls: 'fabric-yt-link', text: link });
+            linkEl.addEventListener('click', () => {
+                selectedIndex = index;
+                updateSelection();
+            });
+        });
+    
+        const buttonContainer = contentEl.createEl('div', { cls: 'fabric-yt-modal-buttons' });
+        const skipButton = buttonContainer.createEl('button', { text: 'Skip' });
+        skipButton.addClass('skip-button');
+        const runYTButton = buttonContainer.createEl('button', { text: 'Run' });
+        runYTButton.addClass('run-button');
+
+        skipButton.addEventListener('click', () => {
+            modal.close();
+            this.runFabric(source);
+        });
+    
+        runYTButton.addEventListener('click', () => {
+            modal.close();
+            if (links.length > 0) {
+                this.runYT(links[selectedIndex]);
+            } else {
+                new Notice('No YouTube links found');
+            }
+        });
+    
+        modal.onOpen = () => {
+            updateSelection();
+            
+            const handleKeyDown = (event: KeyboardEvent) => {
+                switch (event.key) {
+                    case 'ArrowUp':
+                        selectedIndex = (selectedIndex - 1 + links.length) % links.length;
+                        updateSelection();
+                        event.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        selectedIndex = (selectedIndex + 1) % links.length;
+                        updateSelection();
+                        event.preventDefault();
+                        break;
+                    case 'Enter':
+                        modal.close();
+                        this.runYT(links[selectedIndex]);
+                        event.preventDefault();
+                        break;
+                }
+            };
+    
+            document.addEventListener('keydown', handleKeyDown);
+            modal.onClose = () => {
+                document.removeEventListener('keydown', handleKeyDown);
+            };
+        };
+    
+        modal.open();
+    }
+    
+
+    async runYT(url: string) {
+        let outputNoteName = this.outputNoteInput.value.trim();
+        const pattern = this.searchInput.value.trim();
+        if (!pattern) {
+            new Notice('Please select a pattern first');
+            return;
+        }
+
+        this.logoContainer.addClass('loading');
+        this.loadingText.setText('');
+        this.animateLoadingText(this.getRandomLoadingMessage());
+    
+    
+        try {
+            const response = await fetch(apiURL + 'yt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pattern: pattern,
+                    url: url
+                }),
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            const output = data.output;
+    
+            const newFile = await this.createOutputNote(output, outputNoteName);
+            this.logoContainer.removeClass('loading');
+            this.loadingText.setText('');
+            this.app.workspace.openLinkText(newFile.path, '', true);
+            new Notice('YouTube Fabric output generated successfully');
+        } catch (error) {
+            console.error('Failed to run YouTube Fabric:', error);
+            new Notice('Failed to run YouTube Fabric. Please check your settings and try again.');
+        }
+    }
+    
+    
 }
 
 class FabricSettingTab extends PluginSettingTab {
