@@ -2,105 +2,108 @@
 
 ## Overview
 
-The Fabric Plugin for Obsidian integrates the Fabric tool into the Obsidian note-taking application. This plugin allows users to run Fabric commands directly from within Obsidian, leveraging Fabric's capabilities to process text and generate output notes.
+This plugin integrates the Fabric tool into Obsidian, allowing users to run Fabric commands directly from within the Obsidian interface. It also supports FFmpeg for additional functionalities and provides a user-friendly interface for managing settings and running commands.
 
 ## Features
 
 - **Fabric Command Execution**: Run Fabric commands on the current note or clipboard content.
-- **Pattern Search**: Search and select Fabric patterns using a dropdown interface.
-- **Output Note Creation**: Generate and save output notes based on Fabric command results.
-- **Settings Management**: Configure paths for Fabric and FFmpeg executables, and specify an output folder for generated notes.
-- **Installation Checks**: Test the availability of Fabric and FFmpeg installations.
+- **Pattern Search**: Search and select Fabric patterns.
+- **YouTube Link Detection**: Automatically detect and process YouTube links.
+- **Settings Management**: Configure paths for Fabric and FFmpeg executables.
+- **Pattern Refresh**: Refresh available Fabric patterns from the API.
+- **Output Note Creation**: Save Fabric command outputs as new notes in a specified folder.
 
 ## Installation
 
-1. Download and install the plugin in your Obsidian vault.
-2. Configure the plugin settings to provide paths to the Fabric and FFmpeg executables.
+### Prerequisites
 
-## Configuration
+1. **Fabric**: Install Fabric from [danielmiessler/fabric](https://github.com/danielmiessler/fabric).
+2. **Fabric Connector**: Install Fabric Connector from [chasebank87/fabric-connector](https://github.com/chasebank87/fabric-connector).
 
-### Settings
+### Steps
 
-- **Fabric Path**: Path to the Fabric executable. If Fabric is not found, provide the full path.
-- **FFmpeg Path**: Path to the FFmpeg executable. If FFmpeg is not found, provide the full path.
-- **Output Folder**: Folder to save Fabric output notes.
+1. Follow the installation instructions provided in the respective repositories for Fabric and Fabric Connector.
+2. Ensure that both Fabric and FFmpeg are installed and accessible from your system's PATH.
 
-### Setting Up
+## Settings
 
-1. Open the settings tab for the Fabric Plugin.
-2. Enter the paths for the Fabric and FFmpeg executables.
-3. Specify the output folder where generated notes will be saved.
+### Fabric Path
 
-### Testing Installation
+Path to the Fabric executable. If Fabric is not found, provide the full path.
 
-- Use the "Test Fabric Installation" button to check if Fabric is correctly installed.
-- Use the "Test FFmpeg Installation" button to check if FFmpeg is correctly installed.
+### FFmpeg Path
+
+Path to the FFmpeg executable. If FFmpeg is not found, provide the full path.
+
+### Output Folder
+
+Folder to save Fabric output notes.
+
+### YouTube Autodetect
+
+Toggle to enable or disable automatic detection of YouTube links in the content.
 
 ## Usage
 
-### Activating the Plugin
-
-1. Click on the ribbon icon (brain) labeled "fabric" to activate the Fabric view.
-2. The Fabric view will open, displaying options to run Fabric commands on the current note or clipboard content.
-
 ### Running Fabric Commands
 
-1. **Current Note**: Click the "Current Note" button to run a Fabric command on the content of the currently active note.
-2. **Clipboard**: Click the "Clipboard" button to run a Fabric command on the content of the clipboard.
+1. **Current Note**: Run a Fabric command on the content of the currently active note.
+2. **Clipboard**: Run a Fabric command on the content copied to the clipboard.
+3. **Pattern**: Select a pattern from the dropdown and run a Fabric command using that pattern.
 
-### Searching Patterns
+### YouTube Link Detection
 
-1. Enter a search query in the "Search patterns..." input field.
-2. The dropdown will display matching patterns based on your query.
-3. Select a pattern from the dropdown to use it in a Fabric command.
+If YouTube autodetect is enabled, the plugin will scan for YouTube links in the content and prompt you to select a link to process.
 
-### Generating Output Notes
+### Refresh Patterns
 
-1. Enter a name for the output note in the "Output note name" input field.
-2. Run a Fabric command using one of the available options (Current Note, Clipboard, or selected pattern).
-3. The plugin will create a new note with the specified name in the configured output folder.
+Click the refresh button to reload available patterns from the API.
 
-## Development
+## Testing Installations
 
-### Code Structure
+### Test Fabric Installation
 
-- **FabricPlugin**: Main class that handles plugin loading, settings management, and command execution.
-- **FabricView**: Custom view for interacting with Fabric commands and displaying results.
-- **FabricSettingTab**: Settings tab for configuring plugin options.
+1. Go to the plugin settings.
+2. Click the "Test" button under "Test Fabric Installation".
+3. A notice will indicate whether Fabric is correctly installed and how many patterns are available.
 
-### Key Methods
+### Test FFmpeg Installation
 
-- `onload()`: Initializes the plugin, loads settings, and registers views and icons.
-- `loadSettings()`: Loads plugin settings from storage.
-- `saveSettings()`: Saves plugin settings to storage.
-- `checkFabricAvailability()`: Checks if Fabric is available by running a test command.
-- `checkFFmpegAvailability()`: Checks if FFmpeg is available by running a test command.
-- `runFabricCommand(args, input)`: Executes a Fabric command with specified arguments and input.
-- `activateView()`: Activates and reveals the custom Fabric view.
-
-### Custom View Components
-
-- **Pattern Search Input**: Input field for searching Fabric patterns.
-- **Pattern Dropdown**: Dropdown menu displaying matching patterns based on search query.
-- **Output Note Input**: Input field for specifying the name of the output note.
-- **Buttons Container**: Container for action buttons (Current Note, Clipboard).
-- **Progress Spinner**: Spinner indicating progress during command execution.
+1. Go to the plugin settings.
+2. Click the "Test" button under "Test FFmpeg Installation".
+3. A notice will indicate whether FFmpeg is correctly installed.
 
 ## Help Text
 
-The help text provides platform-specific instructions for locating the paths of Fabric and FFmpeg executables:
+If Fabric or FFmpeg is installed for the user instead of globally, provide the full path to the binary.
 
-- **macOS/Linux**:
-  - Open Terminal
-  - Run `which fabric` or `which ffmpeg`
-  - Copy the output path and paste it in settings
-  - Default patterns folder: `~/.config/fabric/patterns`
+### macOS
 
-- **Windows**:
-  - Open Command Prompt
-  - Run `where fabric` or `where ffmpeg`
-  - Copy the output path and paste it in settings
-  - Default patterns folder: `%APPDATA%\fabric\patterns`
+1. Open Terminal.
+2. Run `which fabric` or `which ffmpeg`.
+3. Copy the output path and paste it in the settings.
+
+The default fabric patterns folder is `~/.config/fabric/patterns`.
+
+### Linux
+
+1. Open Terminal.
+2. Run `which fabric` or `which ffmpeg`.
+3. Copy the output path and paste it in the settings.
+
+The default fabric patterns folder is `~/.config/fabric/patterns`.
+
+### Windows
+
+1. Open Command Prompt.
+2. Run `where fabric` or `where ffmpeg`.
+3. Copy the output path and paste it in the settings.
+
+The default fabric patterns folder is `%APPDATA%\fabric\patterns`.
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request with your changes.
 
 ## License
 
@@ -108,4 +111,4 @@ This project is licensed under the MIT License.
 
 ---
 
-For more information, visit the [Fabric GitHub repository](https://github.com/danielmiessler/fabric).
+For more information, visit the [official documentation](https://github.com/danielmiessler/fabric) and [Fabric Connector repository](https://github.com/chasebank87/fabric-connector).

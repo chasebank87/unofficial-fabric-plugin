@@ -355,7 +355,7 @@
 }
 
 .fabric-yt-toggle.active .fabric-yt-toggle-slider {
-  transform: translateX(9px);
+  transform: translateX(10px);
 }
 
 .fabric-yt-label {

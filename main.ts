@@ -640,7 +640,20 @@ class FabricSettingTab extends PluginSettingTab {
   display(): void {
       const { containerEl } = this;
       containerEl.empty();
-      containerEl.createEl('h2', { text: 'Fabric Settings' });
+      containerEl.createEl('h2', { text: 'Unofficial Fabric Plugin Settings' });
+    
+      const fabConnectorText = `
+This plugin requires that you have fabric and fabric connector installed.
+
+Install Instructions:
+1. [danielmiessler/fabric](https://github.com/danielmiessler/fabric)
+2. [chasebank87/fabric-connector](https://github.com/chasebank87/fabric-connector)
+
+Follow Daniel's instructions to install fabric and then to run the Fabric Connector, use the latest release
+from Chase's repository. Their is currenlty a macOS and Windows release available.
+      `
+      const fabConnectorRequried = containerEl.createEl('div', { cls: 'fabConnector-required' });
+      MarkdownRenderer.render(this.app, fabConnectorText, fabConnectorRequried, '', this.plugin);
 
       new Setting(containerEl)
         .setName ('Fabric Path')
