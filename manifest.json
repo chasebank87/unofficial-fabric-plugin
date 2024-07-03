@@ -6,7 +6,5 @@
   "description": "Integrates Fabric into your vault",
   "author": "Chasebank87",
   "authorUrl": "https://chaseelder.com",
-	"fundingUrl": "https://github.com/chasebank87/unofficial-fabric-plugin.git",
-  "isDesktopOnly": true,
-  "css": "styles.css"
+  "isDesktopOnly": true
 }

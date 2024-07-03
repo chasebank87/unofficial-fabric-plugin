@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer, setIcon } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer, setIcon, Platform } from 'obsidian';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -72,7 +72,8 @@ export default class FabricPlugin extends Plugin {
     }
 
     async getDefaultShell(): Promise<string> {
-        if (os.platform() === 'win32') {
+        // Use Platform.isWin instead of os.platform() to detect Windows
+        if (Platform.isWin) {
             return 'cmd.exe';
         }
         try {
@@ -181,7 +182,9 @@ class FabricView extends ItemView {
       this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
         const logo = this.logoContainer.createEl('img', {
             cls: 'fabric-logo',
-            attr: { src: 'https://github.com/danielmiessler/fabric/blob/main/images/fabric-logo-gif.gif?raw=true' }
+            attr: { 
+                src: this.plugin.app.vault.adapter.getResourcePath(this.plugin.manifest.dir + '/fabric-logo-gif.gif')
+            }
         });
     
       this.loadingText = this.logoContainer.createEl('div', { cls: 'fabric-loading-text' });
@@ -191,7 +194,7 @@ class FabricView extends ItemView {
       contentContainer.createEl('h3', { text: 'fabric', cls: 'fabric-title' });
 
       this.buttonsContainer = contentContainer.createEl('div', { cls: 'fabric-buttons' });
-      const currentNoteBtn = this.buttonsContainer.createEl('button', { text: 'Current Note', cls: 'fabric-button current-note' });
+      const currentNoteBtn = this.buttonsContainer.createEl('button', { text: 'Current note', cls: 'fabric-button current-note' });
       const clipboardBtn = this.buttonsContainer.createEl('button', { text: 'Clipboard', cls: 'fabric-button clipboard' });
 
       currentNoteBtn.onclick = () => this.runFabric('current');
@@ -428,10 +431,9 @@ class FabricSettingTab extends PluginSettingTab {
   display(): void {
       const { containerEl } = this;
       containerEl.empty();
-      containerEl.createEl('h2', { text: 'Fabric Settings' });
 
       new Setting(containerEl)
-        .setName ('Fabric Path')
+        .setName ('Fabric path')
         .setDesc('Path to the fabric executable. If fabric is not found, provide  the full path.')
         .addText (text => text
           .setPlaceholder ('/path/to/fabric')
@@ -442,7 +444,7 @@ class FabricSettingTab extends PluginSettingTab {
       }));
     
       new Setting(containerEl)
-          .setName('FFmpeg Path')
+          .setName('FFmpeg path')
           .setDesc('Path to the FFmpeg executable. If FFmpeg is not found, provide the full path.')
           .addText(text => text
               .setPlaceholder('/path/to/ffmpeg')
@@ -458,7 +460,7 @@ class FabricSettingTab extends PluginSettingTab {
       MarkdownRenderer.render(this.app, helpText, helpDiv, '', this.plugin);
 
       new Setting(containerEl)
-          .setName('Output Folder')
+          .setName('Output folder')
           .setDesc('Folder to save fabric output notes')
           .addText(text => text
               .setPlaceholder('Enter folder path')
@@ -469,7 +471,7 @@ class FabricSettingTab extends PluginSettingTab {
               }));
 
       const fabricTestButton = new Setting(containerEl)
-          .setName('Test Fabric Installation')
+          .setName('Test fabric installation')
           .setDesc('Check if fabric is correctly installed');
 
       const fabricTestResult = fabricTestButton.controlEl.createEl('span', {
@@ -493,7 +495,7 @@ class FabricSettingTab extends PluginSettingTab {
           }));
 
       const ffmpegTestButton = new Setting(containerEl)
-          .setName('Test FFmpeg Installation')
+          .setName('Test FFmpeg installation')
           .setDesc('Check if FFmpeg is correctly installed');
 
       const ffmpegTestResult = ffmpegTestButton.controlEl.createEl('span', {
@@ -522,38 +524,30 @@ class FabricSettingTab extends PluginSettingTab {
           }));
   }
 
-  getHelpText(): string {
-    const platform = os.platform();
+    getHelpText(): string {
     let helpText = "If fabric or FFmpeg is installed for the user instead of globally, provide the full path to the binary.\n\n";
-
-    switch (platform) {
-        case 'darwin':
-            helpText += "On macOS:\n" +
-                "1. Open Terminal\n" +
-                "2. Run `which fabric` or `which ffmpeg`\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is ~/.config/fabric/patterns\n";
-            break;
-        case 'linux':
-            helpText += "On Linux:\n" +
-                "1. Open Terminal\n" +
-                "2. Run `which fabric` or `which ffmpeg`\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is ~/.config/fabric/patterns\n";
-            break;
-        case 'win32':
-            helpText += "On Windows:\n" +
-                "1. Open Command Prompt\n" +
-                "2. Run `where fabric` or `where ffmpeg`\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is %APPDATA%\\fabric\\patterns\n";
-            break;
-        default:
-            helpText += "To find the fabric or FFmpeg path:\n" +
-                "1. Open a terminal or command prompt\n" +
-                "2. Run the appropriate command to locate fabric or FFmpeg (e.g., `which fabric`, `which ffmpeg`, `where fabric`, or `where ffmpeg`)\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is ~/.config/fabric/patterns (macOS/Linux) or %APPDATA%\\fabric\\patterns (Windows)\n";
+      
+    if (Platform.isMacOS) {
+        helpText += "On macOS:\n" +
+            "1. Open Terminal\n" +
+            "2. Run `which fabric` or `which ffmpeg`\n" +
+            "3. Copy the output path and paste it above\n"
+    } else if (Platform.isLinux) {
+        helpText += "On Linux:\n" +
+            "1. Open Terminal\n" +
+            "2. Run `which fabric` or `which ffmpeg`\n" +
+            "3. Copy the output path and paste it above\n"
+    } else if (Platform.isWin) {
+        helpText += "On Windows:\n" +
+            "1. Open Command Prompt\n" +
+            "2. Run `where fabric` or `where ffmpeg`\n" +
+            "3. Copy the output path and paste it above\n" +
+            "The default fabric patterns folder is %APPDATA%\\fabric\\patterns\n"
+    } else {
+        helpText += "To find the fabric or FFmpeg path:\n" +
+            "1. Open a terminal or command prompt\n" +
+            "2. Run the appropriate command to locate fabric or FFmpeg (e.g., `which fabric`, `which ffmpeg`, `where fabric`, or `where ffmpeg`)\n" +
+            "3. Copy the output path and paste it above\n"
     }
 
     return helpText;
