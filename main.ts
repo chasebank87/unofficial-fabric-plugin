@@ -14,13 +14,15 @@ interface FabricPluginSettings {
     ffmpegPath: string;
     outputFolder: string;
     youtubeAutodetectEnabled: boolean;
+    fabricModel: string;
 }
 
 const DEFAULT_SETTINGS: FabricPluginSettings = {
     fabricPath: 'fabric',
     ffmpegPath: 'ffmpeg',
     outputFolder: '',
-    youtubeAutodetectEnabled: true
+    youtubeAutodetectEnabled: true,
+    fabricModel: 'gpt-4o'
 }
 
 export default class FabricPlugin extends Plugin {
@@ -650,7 +652,7 @@ Install Instructions:
 2. [chasebank87/fabric-connector](https://github.com/chasebank87/fabric-connector)
 
 Follow Daniel's instructions to install fabric and then to run the Fabric Connector, use the latest release
-from Chase's repository. Their is currenlty a macOS and Windows release available.
+from fabric-connector repository. Windows and MacOS packages are availble.
       `
       const fabConnectorRequried = containerEl.createEl('div', { cls: 'fabConnector-required' });
       MarkdownRenderer.render(this.app, fabConnectorText, fabConnectorRequried, '', this.plugin);
