@@ -14,7 +14,7 @@ interface FabricPluginSettings {
     ffmpegPath: string;
     outputFolder: string;
     youtubeAutodetectEnabled: boolean;
-    fabricModel: string;
+    defaultModel: string;
 }
 
 const DEFAULT_SETTINGS: FabricPluginSettings = {
@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS: FabricPluginSettings = {
     ffmpegPath: 'ffmpeg',
     outputFolder: '',
     youtubeAutodetectEnabled: true,
-    fabricModel: 'gpt-4o'
+    defaultModel: ''
 }
 
 export default class FabricPlugin extends Plugin {
@@ -136,79 +136,85 @@ export default class FabricPlugin extends Plugin {
 
 
 class FabricView extends ItemView {
-  plugin: FabricPlugin;
-  patterns: string[] = [];
-  patternDropdown: HTMLElement;
-  searchInput: HTMLInputElement;
-  outputNoteInput: HTMLInputElement;
-  selectedOptionIndex: number = -1;
-  buttonsContainer: HTMLElement;
-  progressSpinner: HTMLElement;
-  patternsSyncContainer: HTMLElement;
-  patternsSyncButton: HTMLElement;
-  containerEl: HTMLElement;
-  refreshButton: HTMLElement;
-  logoContainer: HTMLElement;
-  loadingText: HTMLElement;
-  ytSwitch: HTMLInputElement;
-  ytToggle: HTMLElement;
+    plugin: FabricPlugin;
+    patterns: string[] = [];
+    patternDropdown: HTMLElement;
+    searchInput: HTMLInputElement;
+    outputNoteInput: HTMLInputElement;
+    selectedOptionIndex: number = -1;
+    buttonsContainer: HTMLElement;
+    progressSpinner: HTMLElement;
+    patternsSyncContainer: HTMLElement;
+    patternsSyncButton: HTMLElement;
+    containerEl: HTMLElement;
+    refreshButton: HTMLElement;
+    logoContainer: HTMLElement;
+    loadingText: HTMLElement;
+    ytSwitch: HTMLInputElement;
+    ytToggle: HTMLElement;
+    modelSearchInput: HTMLInputElement;
+    modelDropdown: HTMLElement;
+    models: string[] = [];
+    selectedModelIndex: number = -1;
+    defaultModelDisplay: HTMLElement;
+    modelNameSpan: HTMLSpanElement;
 
-  loadingMessages: string[] = [
-    "reticulating splines...",
-    "engaging warp drive...",
-    "calibrating flux capacitor...",
-    "compiling techno-babble...",
-    "reversing the polarity...",
-    "bypassing the mainframe...",
-    "initializing neural network...",
-    "decrypting alien transmissions...",
-    "charging photon torpedoes...",
-    "hacking the gibson..."
-  ];
+    loadingMessages: string[] = [
+        "reticulating splines...",
+        "engaging warp drive...",
+        "calibrating flux capacitor...",
+        "compiling techno-babble...",
+        "reversing the polarity...",
+        "bypassing the mainframe...",
+        "initializing neural network...",
+        "decrypting alien transmissions...",
+        "charging photon torpedoes...",
+        "hacking the gibson..."
+    ];
 
-  constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin) {
-      super(leaf);
-      this.plugin = plugin;
-  }
+    constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin) {
+        super(leaf);
+        this.plugin = plugin;
+    }
 
-  getViewType(): string {
-      return 'fabric-view';
-  }
+    getViewType(): string {
+        return 'fabric-view';
+    }
 
-  getDisplayText(): string {
-      return 'Fabric';
-  }
+    getDisplayText(): string {
+        return 'Fabric';
+    }
 
-  async onOpen() {
-      this.containerEl = this.contentEl;
-      this.containerEl.empty();
-      this.containerEl.addClass('fabric-view');
+    async onOpen() {
+        this.containerEl = this.contentEl;
+        this.containerEl.empty();
+        this.containerEl.addClass('fabric-view');
 
-      this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
-        const logo = this.logoContainer.createEl('img', {
-            cls: 'fabric-logo',
-            attr: { 
-                src: this.plugin.app.vault.adapter.getResourcePath(this.plugin.manifest.dir + '/fabric-logo-gif.gif')
-            }
-        });
-      this.loadingText = this.logoContainer.createEl('div', { cls: 'fabric-loading-text' });
+        this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
+            const logo = this.logoContainer.createEl('img', {
+                cls: 'fabric-logo',
+                attr: { 
+                    src: this.plugin.app.vault.adapter.getResourcePath(this.plugin.manifest.dir + '/fabric-logo-gif.gif')
+                }
+            });
+        this.loadingText = this.logoContainer.createEl('div', { cls: 'fabric-loading-text' });
 
-      const contentContainer = this.containerEl.createEl('div', { cls: 'fabric-content' });
+        const contentContainer = this.containerEl.createEl('div', { cls: 'fabric-content' });
 
-   // Add YouTube toggle and icon
-   const ytToggleContainer = contentContainer.createEl('div', { cls: 'fabric-yt-toggle-container' });
-    
-   // Create toggle
-   this.ytToggle = ytToggleContainer.createEl('div', { 
-    cls: `fabric-yt-toggle ${this.plugin.settings.youtubeAutodetectEnabled ? 'active' : ''}`
-});
-   const toggleSlider = this.ytToggle.createEl('span', { cls: 'fabric-yt-toggle-slider' });
-   
-    // Create text label
-    const ytLabel = ytToggleContainer.createEl('span', { 
-        cls: 'fabric-yt-label',
-        text: 'Autodetect YouTube Links'
+    // Add YouTube toggle and icon
+    const ytToggleContainer = contentContainer.createEl('div', { cls: 'fabric-yt-toggle-container' });
+        
+    // Create toggle
+    this.ytToggle = ytToggleContainer.createEl('div', { 
+        cls: `fabric-yt-toggle ${this.plugin.settings.youtubeAutodetectEnabled ? 'active' : ''}`
     });
+    const toggleSlider = this.ytToggle.createEl('span', { cls: 'fabric-yt-toggle-slider' });
+    
+        // Create text label
+        const ytLabel = ytToggleContainer.createEl('span', { 
+            cls: 'fabric-yt-label',
+            text: 'Autodetect YouTube Links'
+        });
 
 
       contentContainer.createEl('h3', { text: 'fabric', cls: 'fabric-title' });
@@ -220,29 +226,53 @@ class FabricView extends ItemView {
       currentNoteBtn.onclick = () => this.runFabric('current');
       clipboardBtn.onclick = () => this.runFabric('clipboard');
 
-    const inputsContainer = contentContainer.createEl('div', { cls: 'fabric-inputs-container' });
-    
+  
+      const inputsContainer = contentContainer.createEl('div', { cls: 'fabric-inputs-container' });
 
       this.outputNoteInput = inputsContainer.createEl('input', {
           cls: 'fabric-input',
           attr: { type: 'text', placeholder: 'Output note name' }
       });
-
+  
       this.searchInput = inputsContainer.createEl('input', {
           cls: 'fabric-input',
           attr: { type: 'text', placeholder: 'Search patterns...' }
       });
-
-      this.patternDropdown = contentContainer.createEl('div', { cls: 'fabric-dropdown' });
-
+  
+      this.modelSearchInput = inputsContainer.createEl('input', {
+          cls: 'fabric-input',
+          attr: {
+              type: 'text',
+              placeholder: 'Search models...',
+          }
+          
+      });
+  
+      this.patternDropdown = contentContainer.createEl('div', { cls: 'fabric-dropdown' , attr: { id: 'pattern-dropdown' }} );
+      this.modelDropdown = contentContainer.createEl('div', { cls: 'fabric-dropdown', attr: { id: 'model-dropdown' }});
+  
       this.searchInput.addEventListener('input', () => {
           this.updatePatternOptions(this.searchInput.value.toLowerCase());
       });
-
-      this.searchInput.addEventListener('keydown', (event) => {
-          this.handleDropdownNavigation(event);
+  
+      this.modelSearchInput.addEventListener('input', () => {
+          this.updateModelOptions(this.modelSearchInput.value.toLowerCase());
       });
-
+  
+      this.searchInput.addEventListener('keydown', (event) => {
+          this.handleDropdownNavigation(event, this.patternDropdown, this.searchInput);
+      });
+  
+      this.modelSearchInput.addEventListener('keydown', (event) => {
+          this.handleDropdownNavigation(event, this.modelDropdown, this.modelSearchInput);
+      });
+        
+    // Create the default model display
+    this.defaultModelDisplay = contentContainer.createEl('div', { cls: 'fabric-default-model' });
+    this.defaultModelDisplay.createSpan({ text: 'Powered by ' });
+    this.modelNameSpan = this.defaultModelDisplay.createSpan({ cls: 'model-name' });
+    this.updatePoweredByText(this.plugin.settings.defaultModel || 'No default model set');
+  
       this.searchInput.addEventListener('focus', () => {
           this.searchInput.classList.add('active');
       });
@@ -284,22 +314,31 @@ class FabricView extends ItemView {
       setIcon(this.refreshButton, 'refresh-cw');
       this.refreshButton.onclick = async () => {
           await this.loadPatterns();
-          new Notice('Patterns refreshed');
+          await this.loadModels();
+          new Notice('Patterns and models refreshed');
       };
 
 
     this.progressSpinner = contentContainer.createEl('div', { cls: 'fabric-progress-spinner' });
     
 
-      await this.loadPatterns();
-      this.updatePatternOptions('');
-      this.searchInput.focus();
+        await this.loadPatterns();
+        await this.loadModels();
+        this.updatePatternOptions('');
+        this.updateModelOptions('');
+        this.searchInput.focus();
   }
 
   async runFabric(source: 'current' | 'clipboard' | 'pattern') {
     let data = '';
     let pattern = this.searchInput.value.trim();
     let outputNoteName = this.outputNoteInput.value.trim();
+    const model = this.getCurrentModel();
+      
+    if (!model) {
+        new Notice('Please select a model or set a default model in settings before running.');
+        return;
+    }
     
     if (source === 'current') {
         const activeFile = this.app.workspace.getActiveFile();
@@ -328,6 +367,7 @@ class FabricView extends ItemView {
             },
             body: JSON.stringify({
                 pattern: pattern,
+                model: model,
                 data: data
             })
         });
@@ -394,10 +434,12 @@ class FabricView extends ItemView {
     updatePatternOptions(query: string) {
         this.patternDropdown.empty();
         this.selectedOptionIndex = -1;
-
+    
+        if (query === '') return; // Don't show options if the input is empty
+    
         const filteredPatterns = fuzzaldrin.filter(this.patterns, query);
-
-        if (filteredPatterns.length === 0) {
+    
+        if (filteredPatterns.length === 0 && query !== '') {
             this.patternDropdown.createEl('div', {
                 cls: 'fabric-dropdown-option',
                 text: 'No patterns found'
@@ -416,50 +458,134 @@ class FabricView extends ItemView {
             });
             this.selectedOptionIndex = 0;
         }
+}
+    
+updateModelOptions(query: string) {
+    this.modelDropdown.empty();
+    this.selectedModelIndex = -1;
+
+    if (query === '') return;
+
+    const filteredModels = fuzzaldrin.filter(this.models, query);
+
+    if (filteredModels.length === 0 && query !== '') {
+        this.modelDropdown.createEl('div', {
+            cls: 'fabric-dropdown-option',
+            text: 'No models found'
+        });
+    } else {
+        filteredModels.forEach((model, index) => {
+            const option = this.modelDropdown.createEl('div', {
+                cls: `fabric-dropdown-option ${index === 0 ? 'selected' : ''}`,
+                text: model
+            });
+            option.addEventListener('click', () => {
+                this.selectModel(model);
+            });
+        });
+        this.selectedModelIndex = 0;
     }
+}
 
-    handleDropdownNavigation(event: KeyboardEvent) {
-        if (this.patternDropdown.childElementCount === 0) return;
+selectModel(model: string) {
+    this.modelSearchInput.value = model;
+    this.modelDropdown.empty();
+    this.updatePoweredByText(model);
+}
 
-        switch (event.key) {
-            case 'ArrowUp':
-                this.navigateDropdownOptions(-1);
-                event.preventDefault();
-                break;
-            case 'ArrowDown':
-                this.navigateDropdownOptions(1);
-                event.preventDefault();
-                break;
-            case 'Enter':
-                this.selectCurrentOption();
-                event.preventDefault();
-                break;
+updatePoweredByText(model: string) {
+    const displayModel = model || this.plugin.settings.defaultModel || 'No model selected';
+    
+    if (this.modelNameSpan.textContent !== displayModel) {
+        this.modelNameSpan.setText(displayModel);
+        this.modelNameSpan.addClass('updating');
+        
+        setTimeout(() => {
+            this.modelNameSpan.removeClass('updating');
+        }, 500); // This should match the animation duration
+    }
+}
+    
+updateDefaultModelDisplay() {
+    this.updatePoweredByText(this.modelSearchInput.value);
+}
+
+getCurrentModel(): string {
+    return this.modelSearchInput.value || this.plugin.settings.defaultModel;
+}
+
+async loadModels() {
+    try {
+        const response = await fetch(apiURL + 'models');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        
+        this.models = data.data.models.map((model: { name: any; }) => model.name);
+        
+        console.log('Models loaded:', this.models);
+
+        this.updateDefaultModelDisplay();
+    } catch (error) {
+        console.error('Failed to load models from API:', error);
+        new Notice('Failed to load models. Please check the API server.');
     }
+}
 
-    navigateDropdownOptions(direction: number) {
-        const options = Array.from(this.patternDropdown.children) as HTMLElement[];
+handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTMLInputElement) {
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            this.navigateDropdownOptions(1, dropdown);
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            this.navigateDropdownOptions(-1, dropdown);
+            break;
+        case 'Enter':
+            event.preventDefault();
+            this.selectCurrentOption(dropdown, input);
+            break;
+    }
+}
+
+
+    navigateDropdownOptions(direction: number, dropdown: HTMLElement) {
+        const options = Array.from(dropdown.children) as HTMLElement[];
         const optionsCount = options.length;
-
+    
         if (optionsCount === 0) return;
-
-        this.selectedOptionIndex = (this.selectedOptionIndex + direction + optionsCount) % optionsCount;
-
+    
+        const currentIndex = dropdown === this.patternDropdown ? this.selectedOptionIndex : this.selectedModelIndex;
+        const newIndex = (currentIndex + direction + optionsCount) % optionsCount;
+    
         options.forEach((option, index) => {
-            if (index === this.selectedOptionIndex) {
+            if (index === newIndex) {
                 option.classList.add('selected');
             } else {
                 option.classList.remove('selected');
             }
         });
+    
+        if (dropdown === this.patternDropdown) {
+            this.selectedOptionIndex = newIndex;
+        } else {
+            this.selectedModelIndex = newIndex;
+        }
     }
 
-    selectCurrentOption() {
-        const selectedOption = this.patternDropdown.children[this.selectedOptionIndex] as HTMLElement;
+    selectCurrentOption(dropdown: HTMLElement, input: HTMLInputElement) {
+        const index = dropdown === this.modelDropdown ? this.selectedModelIndex : this.selectedOptionIndex;
+        const selectedOption = dropdown.children[index] as HTMLElement;
         if (selectedOption) {
-            const pattern = selectedOption.textContent!;
-            this.searchInput.value = pattern;
-            this.patternDropdown.empty();
+            const value = selectedOption.textContent!;
+            if (dropdown === this.modelDropdown) {
+                this.selectModel(value);
+            } else {
+                input.value = value;
+                dropdown.empty();
+            }
         }
     }
 
@@ -588,6 +714,13 @@ class FabricView extends ItemView {
     async runYT(url: string) {
         let outputNoteName = this.outputNoteInput.value.trim();
         const pattern = this.searchInput.value.trim();
+        const model = this.getCurrentModel();
+      
+        if (!model) {
+            new Notice('Please select a model or set a default model in settings before running.');
+            return;
+        }
+        
         if (!pattern) {
             new Notice('Please select a pattern first');
             return;
@@ -606,6 +739,7 @@ class FabricView extends ItemView {
                 },
                 body: JSON.stringify({
                     pattern: pattern,
+                    model: model,
                     url: url
                 }),
             });
@@ -694,6 +828,23 @@ from fabric-connector repository. Windows and MacOS packages are availble.
                   this.plugin.settings.outputFolder = value;
                   await this.plugin.saveSettings();
               }));
+      
+    new Setting(containerEl)
+    .setName('Default Model')
+    .setDesc('Set the default model')
+    .addText(text => text
+        .setPlaceholder('Enter default model')
+        .setValue(this.plugin.settings.defaultModel)
+        .onChange(async (value) => {
+            this.plugin.settings.defaultModel = value;
+            await this.plugin.saveSettings();
+            // Update the display in the main view if it's open
+            this.app.workspace.getLeavesOfType('fabric-view').forEach((leaf) => {
+                if (leaf.view instanceof FabricView) {
+                    leaf.view.updateDefaultModelDisplay();
+                }
+            });
+        }));
 
       const fabricTestButton = new Setting(containerEl)
           .setName('Test Fabric Installation')

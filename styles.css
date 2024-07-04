@@ -454,3 +454,37 @@
 .skip-button:hover {
   box-shadow: 0 0 10px rgba(63, 42, 86, 0.5), 0 0 20px rgba(46, 80, 119, 0.5);
 }
+
+@keyframes swipeUp {
+  0% {
+      transform: translateY(10px);
+      opacity: 0;
+  }
+  100% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+}
+
+.fabric-default-model {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.fabric-default-model .model-name {
+  transition: color 0.5s ease;
+  display: inline-block;
+}
+
+.fabric-default-model .model-name.updating {
+  animation: swipeUp 0.5s ease-out;
+  color: var(--text-accent);
+}
+
+#model-dropdown {
+  bottom: -17%; /* Position above the models input */
+  max-height: 150px; /* Limit height to prevent covering too much */
+}
