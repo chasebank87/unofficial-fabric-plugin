@@ -485,6 +485,6 @@
 }
 
 #model-dropdown {
-  bottom: -17%; /* Position above the models input */
+  top: 22%; /* Position above the models input */
   max-height: 150px; /* Limit height to prevent covering too much */
 }

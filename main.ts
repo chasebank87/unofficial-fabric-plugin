@@ -257,6 +257,7 @@ class FabricView extends ItemView {
   
       this.modelSearchInput.addEventListener('input', () => {
           this.updateModelOptions(this.modelSearchInput.value.toLowerCase());
+          this.updatePoweredByText(this.modelSearchInput.value);
       });
   
       this.searchInput.addEventListener('keydown', (event) => {
