@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, TFolder, TAbstractFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal } from 'obsidian';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -13,25 +13,39 @@ interface FabricPluginSettings {
     fabricPath: string;
     ffmpegPath: string;
     outputFolder: string;
+    customPatternsFolder: string;
     youtubeAutodetectEnabled: boolean;
     defaultModel: string;
+    debug: boolean;
 }
 
 const DEFAULT_SETTINGS: FabricPluginSettings = {
     fabricPath: 'fabric',
     ffmpegPath: 'ffmpeg',
     outputFolder: '',
+    customPatternsFolder: '',
     youtubeAutodetectEnabled: true,
-    defaultModel: ''
+    defaultModel: '',
+    debug: false
 }
 
 export default class FabricPlugin extends Plugin {
     settings: FabricPluginSettings;
+    customPatternsFolder: TFolder | null = null;
+    patterns: string[] = [];
+    debug: boolean;
 
     async onload() {
         await this.loadSettings();
+        this.updateLogging();
+        await this.loadSettings();
         await this.checkFabricAvailability();
         await this.checkFFmpegAvailability();
+        this.registerCustomPatternsFolderWatcher();
+
+        this.app.workspace.onLayoutReady(() => {
+            this.registerCustomPatternsFolderWatcher();
+        });
 
         this.addSettingTab(new FabricSettingTab(this.app, this));
 
@@ -42,6 +56,25 @@ export default class FabricPlugin extends Plugin {
         });
     }
 
+    private isLogging = false;
+
+    log(message: string, ...args: any[]) {
+        if (this.settings.debug && !this.isLogging) {
+            this.isLogging = true;
+            console.log(`[Fabric Debug] ${message}`, ...args);
+            this.isLogging = false;
+        }
+    }
+
+
+    updateLogging() {
+        if (this.settings.debug) {
+            console.log('[Fabric] Debug mode enabled');
+        } else {
+            console.log('[Fabric] Debug mode disabled');
+        }
+    }
+
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
@@ -49,11 +82,129 @@ export default class FabricPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
     }
+
+    registerCustomPatternsFolderWatcher() {
+        this.log("Registering custom patterns folder watcher");
+        // Unregister previous watcher if exists
+        this.app.vault.off('delete', this.handleFileDeletion);
+    
+        if (this.settings.customPatternsFolder) {
+            const folderPath = this.settings.customPatternsFolder.endsWith('/') 
+                ? this.settings.customPatternsFolder 
+                : this.settings.customPatternsFolder + '/';
+            
+            this.log(`Watching for deletions in: ${folderPath}`);
+            
+            this.registerEvent(
+                this.app.vault.on('delete', this.handleFileDeletion)
+            );
+        } else {
+            console.warn('Custom patterns folder path not set in settings');
+        }
+    }
+    
+
+    handleFileDeletion = (file: TAbstractFile) => {
+        this.log(`File deletion detected: ${file.path}`);
+        this.log(`Custom patterns folder: ${this.settings.customPatternsFolder}`);
+        
+        if (!(file instanceof TFile)) {
+            this.log("Deleted item is not a file");
+            return;
+        }
+        
+        // Check if the file is directly in the custom patterns folder
+        const customPatternsPath = this.settings.customPatternsFolder.endsWith('/') 
+            ? this.settings.customPatternsFolder 
+            : this.settings.customPatternsFolder + '/';
+        
+        if (!file.path.startsWith(customPatternsPath)) {
+            this.log("File is not in the custom patterns folder");
+            return;
+        }
+        
+        if (file.extension !== 'md') {
+            this.log("File is not a markdown file");
+            return;
+        }
+    
+        this.log(`Markdown file deleted in custom patterns folder: ${file.path}`);
+        this.handleCustomPatternDeletion(file.name);
+    };
+
+    async handleCustomPatternDeletion(fileName: string) {
+        this.log(`Handling custom pattern deletion for: ${fileName}`);
+        const patternName = fileName.replace('.md', '');
+        const confirmDelete = await this.confirmPatternDeletion(patternName);
+        if (confirmDelete) {
+            await this.deletePatternFromFabric(patternName);
+        }
+    }
+
+    async confirmPatternDeletion(patternName: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const notice = new Notice('', 0);
+            const container = notice.noticeEl.createDiv('fabric-confirm-deletion');
+            
+            container.createEl('h3', { text: 'Confirm Pattern Deletion' });
+            container.createEl('p', { text: `Do you want to delete the pattern "${patternName}" and its folder from Fabric as well?` });
+            
+            const buttonContainer = container.createDiv('fabric-confirm-buttons');
+            
+            const yesButton = buttonContainer.createEl('button', { text: 'Yes' });
+            yesButton.onclick = () => {
+                notice.hide();
+                resolve(true);
+            };
+            
+            const noButton = buttonContainer.createEl('button', { text: 'No' });
+            noButton.onclick = () => {
+                notice.hide();
+                resolve(false);
+            };
+        });
+    }
+
+    async deletePatternFromFabric(patternName: string) {
+        try {
+            const response = await fetch(apiURL + 'delete_pattern', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pattern: patternName }),
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const result = await response.json();
+            new Notice(result.message);
+    
+            // Reload patterns after successful deletion
+            await this.updateFabricView();
+        } catch (error) {
+            console.error('Error deleting pattern from Fabric:', error);
+            new Notice(`Failed to delete pattern "${patternName}" from Fabric.`);
+        }
+    }
+
+
+    updateFabricView() {
+        // Find and update the FabricView if it exists
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (leaf.view instanceof FabricView) {
+                (leaf.view as FabricView).loadPatterns();
+            }
+        });
+    }
+
   
     async checkFabricAvailability() {
         try {
             const patterns = await this.runFabricCommand('--list');
-            console.log(`Fabric patterns available: ${patterns}`);
+            this.log(`Fabric patterns available: ${patterns}`);
         } catch (error) {
             console.error('Error checking Fabric availability:', error);
             new Notice('Fabric not found. Please check the path in plugin settings.');
@@ -67,7 +218,7 @@ export default class FabricPlugin extends Plugin {
               console.error('FFmpeg test error:', stderr);
               new Notice('FFmpeg not found. Please check the path in plugin settings.');
           } else {
-              console.log(`FFmpeg version: ${stdout.trim()}`);
+              this.log(`FFmpeg version: ${stdout.trim()}`);
           }
       } catch (error) {
           console.error('Error checking FFmpeg availability:', error);
@@ -99,7 +250,7 @@ export default class FabricPlugin extends Plugin {
               command += ` --text ${escapedInput}`;
           }
 
-          console.log(`Executing command: ${command}`);
+          this.log(`Executing command: ${command}`);
           const { stdout, stderr } = await execAsync(command, { shell });
           if (stderr) {
               console.warn('Fabric command stderr:', stderr);
@@ -158,6 +309,7 @@ class FabricView extends ItemView {
     selectedModelIndex: number = -1;
     defaultModelDisplay: HTMLElement;
     modelNameSpan: HTMLSpanElement;
+    syncButton: HTMLElement;
 
     loadingMessages: string[] = [
         "reticulating splines...",
@@ -304,20 +456,34 @@ class FabricView extends ItemView {
     // Modify the click handlers for currentNoteBtn and clipboardBtn
     currentNoteBtn.onclick = () => this.handleFabricRun('current');
     clipboardBtn.onclick = () => this.handleFabricRun('clipboard');
+        
 
-    
-      this.refreshButton = contentContainer.createEl('button', {
-        cls: 'fabric-refresh-button',
+    const buttonContainer = contentContainer.createEl('div', { cls: 'fabric-button-container' });
+
+    this.refreshButton = buttonContainer.createEl('button', {
+        cls: 'fabric-icon-button fabric-refresh-button',
         attr: {
-            'aria-label': 'Refresh patterns'
+            'aria-label': 'Refresh patterns and models'
         }
-      });
-      setIcon(this.refreshButton, 'refresh-cw');
-      this.refreshButton.onclick = async () => {
-          await this.loadPatterns();
-          await this.loadModels();
-          new Notice('Patterns and models refreshed');
-      };
+    });
+    setIcon(this.refreshButton, 'refresh-cw');
+    this.refreshButton.onclick = async () => {
+        await this.loadPatterns();
+        await this.loadModels();
+        new Notice('Patterns and models refreshed');
+    };
+
+    this.syncButton = buttonContainer.createEl('button', {
+        cls: 'fabric-icon-button fabric-sync-button',
+        attr: {
+            'aria-label': 'Sync custom patterns'
+        }
+    });
+    setIcon(this.syncButton, 'upload-cloud');
+    this.syncButton.onclick = async () => {
+        await this.syncCustomPatterns();
+    };
+  
 
 
     this.progressSpinner = contentContainer.createEl('div', { cls: 'fabric-progress-spinner' });
@@ -522,18 +688,15 @@ async loadModels() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
         this.models = data.data.models.map((model: { name: any; }) => model.name);
-        
-        console.log('Models loaded:', this.models);
-
+        this.plugin.log('Models loaded:', this.models);
         this.updateDefaultModelDisplay();
     } catch (error) {
-        console.error('Failed to load models from API:', error);
+        this.plugin.log('Failed to load models from API:', error);
         new Notice('Failed to load models. Please check the API server.');
     }
 }
-
+    
 handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTMLInputElement) {
     switch (event.key) {
         case 'ArrowDown':
@@ -597,13 +760,11 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            
             // Extract pattern names from the JSON structure
             this.patterns = data.data.patterns.map((pattern: { name: any; }) => pattern.name);
-            
-            console.log('Patterns loaded:', this.patterns);
+            this.plugin.log('Patterns loaded:', this.patterns);
         } catch (error) {
-            console.error('Failed to load patterns from API:', error);
+            this.plugin.log('Failed to load patterns from API:', error);
             new Notice('Failed to load patterns. Please check the API server.');
         }
     }
@@ -763,6 +924,55 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
         }
     }
     
+    async syncCustomPatterns() {
+        const customPatternsFolder = this.plugin.settings.customPatternsFolder;
+        if (!customPatternsFolder) {
+            new Notice('Custom patterns folder not set. Please set it in the plugin settings.');
+            return;
+        }
+    
+        const folderPath = this.app.vault.getAbstractFileByPath(customPatternsFolder);
+        if (!folderPath || !(folderPath instanceof TFolder)) {
+            new Notice('Custom patterns folder not found in the vault.');
+            return;
+        }
+    
+        for (const file of folderPath.children) {
+            if (file instanceof TFile && file.extension === 'md') {
+                const content = await this.app.vault.read(file);
+                const patternName = file.basename;
+    
+                try {
+                    await this.updatePattern(patternName, content);
+                    new Notice(`Pattern "${patternName}" synced successfully.`);
+                } catch (error) {
+                    new Notice(`Failed to sync pattern "${patternName}": ${error.message}`);
+                }
+            }
+        }
+    }
+    
+    async updatePattern(name: string, content: string) {
+        const response = await fetch(`${apiURL}update_pattern`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                pattern: name,
+                content: content
+            })
+        });
+    
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        await this.loadPatterns()
+
+    
+        return await response.json();
+    }
     
 }
 
@@ -829,6 +1039,17 @@ from fabric-connector repository. Windows and MacOS packages are availble.
                   this.plugin.settings.outputFolder = value;
                   await this.plugin.saveSettings();
               }));
+      
+    new Setting(containerEl)
+    .setName('Custom Patterns Folder')
+    .setDesc('Path to your custom patterns folder within the vault')
+    .addText(text => text
+        .setPlaceholder('CustomPatterns')
+        .setValue(this.plugin.settings.customPatternsFolder)
+        .onChange(async (value) => {
+            this.plugin.settings.customPatternsFolder = value;
+            await this.plugin.saveSettings();
+        }));
       
     new Setting(containerEl)
     .setName('Default Model')
@@ -899,6 +1120,17 @@ from fabric-connector repository. Windows and MacOS packages are availble.
                   ffmpegTestResult.setText('❌');
               }
           }));
+      
+          new Setting(containerEl)
+          .setName('Debug Mode')
+          .setDesc('Enable debug logging')
+          .addToggle(toggle => toggle
+              .setValue(this.plugin.settings.debug)
+              .onChange(async (value) => {
+                  this.plugin.settings.debug = value;
+                  await this.plugin.saveSettings();
+                  this.plugin.updateLogging();
+              }));
   }
 
   getHelpText(): string {

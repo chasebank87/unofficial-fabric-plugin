@@ -2,8 +2,10 @@
   "fabricPath": "/Users/chase/.local/bin/fabric",
   "ffmpegPath": "/opt/homebrew/bin/ffmpeg",
   "outputFolder": "Fabric Notes",
+  "customPatternsFolder": "Custom Patterns",
   "youtubeAutodetectEnabled": true,
   "defaultModel": "gpt-4o",
+  "debug": false,
   "fabricModel": "gpt-4-turbo",
   "patternsSyncFolder": "/Users/chase/Knowledge Base/Fabric Patterns",
   "fabricPatternsFolder": "/Users/chase/.config/fabric/patterns"
