@@ -164,7 +164,7 @@
 }
 
 .fabric-button.clipboard {
-  background: linear-gradient(to right, #6B3FA0, #4C7FD2);
+  background: rgb(171, 118, 209);
   transition: background 0.3s ease;
   margin: 0;
 }
@@ -493,4 +493,87 @@
 
 .fabric-confirm-buttons button:last-child {
   background-color: var(--interactive-normal);
+}
+
+.fabric-button.tavily {
+  background: linear-gradient(to right, #6B3FA0, #4C7FD2); 
+}
+
+.fabric-button.clipboard,
+.fabric-button.tavily {
+  flex: 0.5;
+}
+
+.fabric-tavily-modal {
+  background-color: var(--background-primary);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  max-width: 500px;
+  width: 90%;
+}
+
+.fabric-tavily-modal .modal-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: var(--text-normal);
+  text-align: center;
+}
+
+.fabric-tavily-modal .fabric-tavily-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 1rem;
+  margin-bottom: 20px;
+  transition: box-shadow 0.3s ease;
+}
+
+.fabric-tavily-modal .fabric-tavily-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.fabric-tavily-modal .fabric-tavily-button-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fabric-tavily-modal .fabric-tavily-search-button {
+  background: linear-gradient(to right, #6B3FA0, #4C7FD2);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.fabric-tavily-modal .fabric-tavily-search-button:hover {
+  box-shadow: 0 0 10px rgba(107, 63, 160, 0.5), 0 0 20px rgba(76, 127, 210, 0.5);
+}
+
+.fabric-tavily-modal .fabric-tavily-search-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.fabric-tavily-modal .fabric-tavily-search-button:hover::before {
+  width: 300%;
+  height: 300%;
 }

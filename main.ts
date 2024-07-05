@@ -17,6 +17,7 @@ interface FabricPluginSettings {
     youtubeAutodetectEnabled: boolean;
     defaultModel: string;
     debug: boolean;
+    tavilyApiKey: string;
 }
 
 const DEFAULT_SETTINGS: FabricPluginSettings = {
@@ -26,7 +27,8 @@ const DEFAULT_SETTINGS: FabricPluginSettings = {
     customPatternsFolder: '',
     youtubeAutodetectEnabled: true,
     defaultModel: '',
-    debug: false
+    debug: false,
+    tavilyApiKey: ''
 }
 
 export default class FabricPlugin extends Plugin {
@@ -415,6 +417,9 @@ class FabricView extends ItemView {
       const currentNoteBtn = this.buttonsContainer.createEl('button', { text: 'Current Note', cls: 'fabric-button current-note' });
       const clipboardBtn = this.buttonsContainer.createEl('button', { text: 'Clipboard', cls: 'fabric-button clipboard' });
 
+      const tavilyBtn = this.buttonsContainer.createEl('button', { text: 'Tavily', cls: 'fabric-button tavily' });
+      
+        tavilyBtn.onclick = () => this.showTavilySearchModal();
       currentNoteBtn.onclick = () => this.runFabric('current');
       clipboardBtn.onclick = () => this.runFabric('clipboard');
 
@@ -534,7 +539,120 @@ class FabricView extends ItemView {
         this.updatePatternOptions('');
         this.updateModelOptions('');
         this.searchInput.focus();
-  }
+    }
+    
+    showTavilySearchModal() {
+        const modal = new Modal(this.app);
+        modal.titleEl.setText('Tavily Search');
+        const { contentEl } = modal;
+        contentEl.addClass('fabric-tavily-modal');
+        const searchInput = contentEl.createEl('input', {
+            type: 'text',
+            placeholder: 'Enter your search query'
+        });
+        searchInput.addClass('fabric-tavily-input');
+    
+        const searchButton = contentEl.createEl('button', {
+            text: 'Search',
+            cls: 'mod-cta'
+        });
+
+        searchButton.addClass('fabric-tavily-search-button');
+    
+        searchButton.onclick = async () => {
+            const query = searchInput.value.trim();
+            if (query) {
+                modal.close();
+                await this.performTavilySearch(query);
+            } else {
+                new Notice('Please enter a search query');
+            }
+        };
+    
+        modal.open();
+    }
+
+    async performTavilySearch(query: string) {
+        this.logoContainer.addClass('loading');
+        this.loadingText.setText('');
+        this.animateLoadingText('Searching Tavily...');
+    
+        try {
+            const response = await fetch('https://api.tavily.com/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: query,
+                    include_answer: true,
+                    max_results: 5,
+                    include_images: true,
+                    search_depth: "basic",
+                    api_key: this.plugin.settings.tavilyApiKey
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            const searchResult = data.answer || data.results.map((result: any) => result.title + ': ' + result.content).join('\n\n');
+    
+            await this.runFabricWithTavilyResult(searchResult);
+        } catch (error) {
+            console.error('Failed to perform Tavily search:', error);
+            new Notice('Failed to perform Tavily search. Please check your API key and try again.');
+        } finally {
+            this.logoContainer.removeClass('loading');
+            this.loadingText.setText('');
+        }
+    }
+
+    async runFabricWithTavilyResult(searchResult: string) {
+        const pattern = this.searchInput.value.trim();
+        const model = this.getCurrentModel();
+        let outputNoteName = this.outputNoteInput.value.trim();
+    
+        if (!model) {
+            new Notice('Please select a model or set a default model in settings before running.');
+            return;
+        }
+    
+        if (!pattern) {
+            new Notice('Please select a pattern first');
+            return;
+        }
+    
+        try {
+            const response = await fetch(apiURL + 'fabric', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    pattern: pattern,
+                    model: model,
+                    data: searchResult
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const responseData = await response.json();
+            const output = responseData.output;
+    
+            const newFile = await this.createOutputNote(output, outputNoteName);
+            new Notice('Fabric output generated successfully with Tavily search result');
+        } catch (error) {
+            console.error('Failed to run fabric with Tavily result:', error);
+            new Notice('Failed to run fabric with Tavily result. Please check your settings and try again.');
+        }
+    }
 
   async runFabric(source: 'current' | 'clipboard' | 'pattern') {
     let data = '';
@@ -677,7 +795,7 @@ class FabricView extends ItemView {
                 option.addEventListener('click', () => {
                     this.searchInput.value = pattern;
                     this.patternDropdown.empty();
-                    this.runFabric('pattern');
+                    //this.runFabric('pattern');
                 });
             });
             this.selectedOptionIndex = 0;
@@ -1078,6 +1196,17 @@ from fabric-connector repository. Windows and MacOS packages are availble.
                   this.plugin.settings.ffmpegPath = value;
                   await this.plugin.saveSettings();
               }));
+      
+              new Setting(containerEl)
+              .setName('Tavily API Key')
+              .setDesc('Enter your Tavily API key')
+              .addText(text => text
+                  .setPlaceholder('Enter API key')
+                  .setValue(this.plugin.settings.tavilyApiKey)
+                  .onChange(async (value) => {
+                      this.plugin.settings.tavilyApiKey = value;
+                      await this.plugin.saveSettings();
+                  }));
 
       // Add help text
       const helpText = this.getHelpText();
