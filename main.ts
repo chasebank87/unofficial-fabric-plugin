@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, TFolder, TAbstractFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, TFolder, TAbstractFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal, ViewState} from 'obsidian';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -49,9 +49,17 @@ export default class FabricPlugin extends Plugin {
 
         this.addSettingTab(new FabricSettingTab(this.app, this));
 
-        this.registerView('fabric-view', (leaf) => new FabricView(leaf, this));
+        this.registerView(
+            'fabric-view',
+            (leaf) => new FabricView(leaf, this)
+        );
+        if (this.app.workspace.layoutReady) {
+            this.initLeaf();
+        } else {
+            this.app.workspace.onLayoutReady(this.initLeaf.bind(this));
+        }
 
-        this.addRibbonIcon('brain', 'fabric', () => {
+        this.addRibbonIcon('brain', 'Fabric', () => {
             this.activateView();
         });
     }
@@ -63,6 +71,19 @@ export default class FabricPlugin extends Plugin {
             this.isLogging = true;
             console.log(`[Fabric Debug] ${message}`, ...args);
             this.isLogging = false;
+        }
+    }
+
+    initLeaf(): void {
+        if (this.app.workspace.getLeavesOfType('fabric-view').length) {
+            return;
+        }
+        const rightLeaf = this.app.workspace.getRightLeaf(false);
+        if (rightLeaf) {
+            rightLeaf.setViewState({
+                type: 'fabric-view',
+                active: true,
+            });
         }
     }
 
@@ -262,27 +283,21 @@ export default class FabricPlugin extends Plugin {
       }
   }
 
-    async activateView() {
-      const { workspace } = this.app;
+  async activateView() {
+    this.app.workspace.detachLeavesOfType('fabric-view');
 
-      let leaf = workspace.getLeavesOfType('fabric-view')[0];
-      
-      if (!leaf) {
-        leaf = workspace.getLeaf('split');
-          await leaf.setViewState({
-              type: 'fabric-view',
-              active: true,
-          });
-      }
+    const rightLeaf = this.app.workspace.getRightLeaf(false);
+    if (rightLeaf) {
+        rightLeaf.setViewState({
+            type: 'fabric-view',
+            active: true,
+        });
+    }
 
-      leaf = workspace.getLeavesOfType('fabric-view')[0];
-      
-      if (leaf) {
-          workspace.revealLeaf(leaf);
-      } else {
-          new Notice('Failed to open Fabric view');
-      }
-  }
+    this.app.workspace.revealLeaf(
+        this.app.workspace.getLeavesOfType('fabric-view')[0]
+    );
+}
 }
 
 
@@ -549,7 +564,6 @@ class FabricView extends ItemView {
         const newFile = await this.createOutputNote(output, outputNoteName);
         this.logoContainer.removeClass('loading');
         this.loadingText.setText('');
-        this.app.workspace.openLinkText(newFile.path, '', true);
         new Notice('Fabric output generated successfully');
     } catch (error) {
         console.error('Failed to run fabric:', error);
@@ -583,19 +597,25 @@ class FabricView extends ItemView {
     }
 
     async createOutputNote(content: string, noteName: string): Promise<TFile> {
-      let fileName = `${noteName}.md`;
-      let filePath = path.join(this.plugin.settings.outputFolder, fileName);
-      let fileExists = await this.app.vault.adapter.exists(filePath);
-      let counter = 1;
-
-      while (fileExists) {
-          fileName = `${noteName} (${counter}).md`;
-          filePath = path.join(this.plugin.settings.outputFolder, fileName);
-          fileExists = await this.app.vault.adapter.exists(filePath);
-          counter++;
-      }
-
-      return await this.app.vault.create(filePath, content);
+        let fileName = `${noteName}.md`;
+        let filePath = path.join(this.plugin.settings.outputFolder, fileName);
+        let fileExists = await this.app.vault.adapter.exists(filePath);
+        let counter = 1;
+    
+        while (fileExists) {
+            fileName = `${noteName} (${counter}).md`;
+            filePath = path.join(this.plugin.settings.outputFolder, fileName);
+            fileExists = await this.app.vault.adapter.exists(filePath);
+            counter++;
+        }
+    
+        const newFile = await this.app.vault.create(filePath, content);
+    
+        // Open the new file in a new tab in the default view
+        const leaf = this.app.workspace.getLeaf('tab');
+        await leaf.openFile(newFile);
+    
+        return newFile;
     }
 
     updatePatternOptions(query: string) {
@@ -916,7 +936,6 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
             const newFile = await this.createOutputNote(output, outputNoteName);
             this.logoContainer.removeClass('loading');
             this.loadingText.setText('');
-            this.app.workspace.openLinkText(newFile.path, '', true);
             new Notice('YouTube Fabric output generated successfully');
         } catch (error) {
             console.error('Failed to run YouTube Fabric:', error);
