@@ -1042,7 +1042,6 @@ class FabricSettingTab extends PluginSettingTab {
   display(): void {
       const { containerEl } = this;
       containerEl.empty();
-      containerEl.createEl('h2', { text: 'Unofficial Fabric Plugin Settings' });
     
       const fabConnectorText = `
 This plugin requires that you have fabric and fabric connector installed.
