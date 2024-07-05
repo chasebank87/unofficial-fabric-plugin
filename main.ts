@@ -542,6 +542,19 @@ class FabricView extends ItemView {
     }
     
     showTavilySearchModal() {
+        const pattern = this.searchInput.value.trim();
+        const model = this.getCurrentModel();
+
+        if (!model) {
+            new Notice('Please select a model or set a default model in settings before running.');
+            return;
+        }
+    
+        if (!pattern) {
+            new Notice('Please select a pattern first');
+            return;
+        }
+        
         const modal = new Modal(this.app);
         modal.titleEl.setText('Tavily Search');
         const { contentEl } = modal;
