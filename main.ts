@@ -336,7 +336,31 @@ class FabricView extends ItemView {
         "initializing neural network...",
         "decrypting alien transmissions...",
         "charging photon torpedoes...",
-        "hacking the gibson..."
+        "hacking the gibson...",
+        "Warming flux capacitor...",
+        "Downloading more RAM...",
+        "Reversing neutron flow...",
+        "Initializing sass protocol...",
+        "Calibrating sarcasm sensors...",
+        "Bypassing laws of physics...",
+        "Generating witty message...",
+        "Spinning hamster wheels...",
+        "Charging sonic screwdriver...",
+        "Aligning the stars...",
+        "Dividing by zero...",
+        "Upgrading to Windows 9...",
+        "Searching for life's meaning...",
+        "Awaiting the Singularity...",
+        "Tuning alien frequencies...",
+        "Bending space-time continuum...",
+        "Compiling crash excuses...",
+        "Calculating success probability...",
+        "Rolling for initiative...",
+        "Initiating self-destruct sequence...",
+        "Summoning IT gods...",
+        "Applying warp core tape...",
+        "Translating binary to dance...",
+        "Charging Arc Reactor..."
     ];
 
     constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin) {
