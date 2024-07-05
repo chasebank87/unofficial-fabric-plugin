@@ -110,7 +110,7 @@
 }
 
 .fabric-refresh-button:hover {
-  color: var(--text-normal);
+  color: var(--text-accent);
 }
 
 .fabric-buttons {
@@ -313,7 +313,7 @@
 .theme-light .fabric-dropdown-input,
 .theme-light .fabric-output-note-input,
 .theme-light .fabric-dropdown {
-    color: #ffffff;
+    color: var(--text-normal);
 }
 
 .fabric-content {
@@ -457,11 +457,11 @@
 
 @keyframes swipeUp {
   0% {
-      transform: translateY(10px);
+      transform: rotateX(45deg) translateY(5px);
       opacity: 0;
   }
   100% {
-      transform: translateY(0);
+      transform: rotateX(0deg) translateY(0);
       opacity: 1;
   }
 }
@@ -518,7 +518,7 @@
 }
 
 .fabric-icon-button:hover svg {
-  color: var(--text-normal);
+  color: var(--text-accent);
 }
 
 .fabric-button-container {
@@ -541,6 +541,7 @@
 
 .fabric-icon-button:hover {
   background-color: var(--interactive-hover);
+  color: var(--text-accent);
 }
 
 .fabric-icon-button svg {
@@ -550,7 +551,7 @@
 }
 
 .fabric-icon-button:hover svg {
-  color: var(--text-normal);
+  color: var(--text-accent);
 }
 
 .fabric-sync-button {
@@ -565,7 +566,7 @@
 }
 
 .fabric-sync-button:hover {
-  color: var(--text-normal);
+  color: var(--text-accent);
 }
 
 .fabric-confirm-deletion {
