@@ -611,12 +611,24 @@ class FabricView extends ItemView {
     
         const newFile = await this.app.vault.create(filePath, content);
     
-        // Open the new file in a new tab in the default view
-        const leaf = this.app.workspace.getLeaf('tab');
-        await leaf.openFile(newFile);
+        // Get the most recently focused leaf in the main workspace
+        const activeLeaf = this.app.workspace.getMostRecentLeaf();
+    
+        if (activeLeaf && !activeLeaf.getViewState().pinned) {
+            // If there's an active leaf and it's not pinned, create a new leaf in split
+            const newLeaf = this.app.workspace.createLeafBySplit(activeLeaf, 'vertical');
+            await newLeaf.openFile(newFile);
+        } else {
+            // If there's no active leaf or it's pinned, create a new leaf
+            const newLeaf = this.app.workspace.getLeaf('tab');
+            await newLeaf.openFile(newFile);
+        }
     
         return newFile;
     }
+    
+    
+    
 
     updatePatternOptions(query: string) {
         this.patternDropdown.empty();
