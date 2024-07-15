@@ -597,11 +597,12 @@ class FabricView extends ItemView {
         }
     
         try {
-            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl+ 'fabric', {
+            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl+ '/fabric', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-API-Key': this.plugin.settings.fabricConnectorApiKey
                 },
                 body: JSON.stringify({
                     pattern: pattern,
@@ -659,7 +660,8 @@ class FabricView extends ItemView {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-API-Key': this.plugin.settings.fabricConnectorApiKey
             },
             body: JSON.stringify({
                 pattern: pattern,
@@ -1290,7 +1292,7 @@ class FabricSettingTab extends PluginSettingTab {
     async testTavilyApiKey() {
         const apiKey = this.plugin.settings.tavilyApiKey;
 
-        if (!apiKey) {
+        if (!this.plugin.settings.tavilyApiKey) {
             new Notice('Please enter a Tavily API Key');
             return;
         }
@@ -1300,7 +1302,7 @@ class FabricSettingTab extends PluginSettingTab {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-API-Key': apiKey
+                    'X-API-Key': this.plugin.settings.tavilyApiKey
                 },
                 body: JSON.stringify({
                     query: 'Test query',
