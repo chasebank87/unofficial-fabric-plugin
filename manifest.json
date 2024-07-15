@@ -1,12 +1,12 @@
 {
   "id": "unofficial-fabric-integration",
   "name": "Unofficial Fabric Integration",
-  "version": "1.0.0",
-  "minAppVersion": "0.15.0",
+  "version": "1.1.0",
+  "minAppVersion": "1.6.5",
   "description": "Integrates Fabric into your vault",
   "author": "Chasebank87",
   "authorUrl": "https://chaseelder.com",
 	"fundingUrl": "https://github.com/chasebank87/unofficial-fabric-plugin.git",
-  "isDesktopOnly": true,
+  "isDesktopOnly": false,
   "css": "styles.css"
 }

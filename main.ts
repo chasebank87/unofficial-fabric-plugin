@@ -6,12 +6,11 @@ import * as os from 'os';
 import * as fuzzaldrin from 'fuzzaldrin-plus';
 
 const shellEscape = require('shell-escape');
-const apiURL = 'http://localhost:49152/';
 const execAsync = promisify(exec);
 
 interface FabricPluginSettings {
-    fabricPath: string;
-    ffmpegPath: string;
+    fabricConnectorApiUrl: string;
+    fabricConnectorApiKey: string;
     outputFolder: string;
     customPatternsFolder: string;
     youtubeAutodetectEnabled: boolean;
@@ -21,15 +20,15 @@ interface FabricPluginSettings {
 }
 
 const DEFAULT_SETTINGS: FabricPluginSettings = {
-    fabricPath: 'fabric',
-    ffmpegPath: 'ffmpeg',
+    fabricConnectorApiUrl: '',
+    fabricConnectorApiKey: '',
     outputFolder: '',
     customPatternsFolder: '',
     youtubeAutodetectEnabled: true,
     defaultModel: '',
     debug: false,
     tavilyApiKey: ''
-}
+};
 
 export default class FabricPlugin extends Plugin {
     settings: FabricPluginSettings;
@@ -41,8 +40,6 @@ export default class FabricPlugin extends Plugin {
         await this.loadSettings();
         this.updateLogging();
         await this.loadSettings();
-        await this.checkFabricAvailability();
-        await this.checkFFmpegAvailability();
         this.registerCustomPatternsFolderWatcher();
 
         this.app.workspace.onLayoutReady(() => {
@@ -53,8 +50,14 @@ export default class FabricPlugin extends Plugin {
 
         this.registerView(
             'fabric-view',
-            (leaf) => new FabricView(leaf, this)
+            (leaf) => new FabricView(
+                leaf,
+                this,
+                this.settings.fabricConnectorApiUrl,
+                this.settings.fabricConnectorApiKey
+            )
         );
+
         if (this.app.workspace.layoutReady) {
             this.initLeaf();
         } else {
@@ -189,29 +192,29 @@ export default class FabricPlugin extends Plugin {
     }
 
     async deletePatternFromFabric(patternName: string) {
-        try {
-            const response = await fetch(apiURL + 'delete_pattern', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ pattern: patternName }),
-            });
-    
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-    
-            const result = await response.json();
-            new Notice(result.message);
-    
-            // Reload patterns after successful deletion
-            await this.updateFabricView();
-        } catch (error) {
-            console.error('Error deleting pattern from Fabric:', error);
-            new Notice(`Failed to delete pattern "${patternName}" from Fabric.`);
+    try {
+        const response = await fetch(this.settings.fabricConnectorApiUrl + '/delete_pattern', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': this.settings.fabricConnectorApiKey // Add the Fabric Connector API Key here
+            },
+            body: JSON.stringify({ pattern: patternName })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const result = await response.json();
+        new Notice(result.message);
+        // Reload patterns after successful deletion
+        await this.updateFabricView();
+    } catch (error) {
+        console.error('Error deleting pattern from Fabric:', error);
+        new Notice(`Failed to delete pattern "${patternName}" from Fabric.`);
     }
+}
 
 
     updateFabricView() {
@@ -221,32 +224,6 @@ export default class FabricPlugin extends Plugin {
                 (leaf.view as FabricView).loadPatterns();
             }
         });
-    }
-
-  
-    async checkFabricAvailability() {
-        try {
-            const patterns = await this.runFabricCommand('--list');
-            this.log(`Fabric patterns available: ${patterns}`);
-        } catch (error) {
-            console.error('Error checking Fabric availability:', error);
-            new Notice('Fabric not found. Please check the path in plugin settings.');
-        }
-    }
-  
-    async checkFFmpegAvailability() {
-      try {
-          const { stdout, stderr } = await execAsync(`"${this.settings.ffmpegPath}" -version`);
-          if (stderr) {
-              console.error('FFmpeg test error:', stderr);
-              new Notice('FFmpeg not found. Please check the path in plugin settings.');
-          } else {
-              this.log(`FFmpeg version: ${stdout.trim()}`);
-          }
-      } catch (error) {
-          console.error('Error checking FFmpeg availability:', error);
-          new Notice('FFmpeg not found. Please check the path in plugin settings.');
-      }
     }
 
     async getDefaultShell(): Promise<string> {
@@ -261,29 +238,6 @@ export default class FabricPlugin extends Plugin {
             return '/bin/sh'; // Fallback to /bin/sh
         }
     }
-
-    async runFabricCommand(args: string, input?: string): Promise<string> {
-      try {
-          const shell = await this.getDefaultShell();
-          let command = `"${this.settings.fabricPath}" ${args}`;
-          
-          if (input) {
-              // Escape the input to handle special characters
-              const escapedInput = shellEscape([input]);
-              command += ` --text ${escapedInput}`;
-          }
-
-          this.log(`Executing command: ${command}`);
-          const { stdout, stderr } = await execAsync(command, { shell });
-          if (stderr) {
-              console.warn('Fabric command stderr:', stderr);
-          }
-          return stdout.trim();
-      } catch (error) {
-          console.error('Error running fabric command:', error);
-          throw error;
-      }
-  }
 
   async activateView() {
     this.app.workspace.detachLeavesOfType('fabric-view');
@@ -327,6 +281,8 @@ class FabricView extends ItemView {
     defaultModelDisplay: HTMLElement;
     modelNameSpan: HTMLSpanElement;
     syncButton: HTMLElement;
+    fabricConnectorApiUrl: string;
+    fabricConnectorApiKey: string;
 
     loadingMessages: string[] = [
         "reticulating splines...",
@@ -365,9 +321,11 @@ class FabricView extends ItemView {
         "Charging Arc Reactor..."
     ];
 
-    constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin) {
+    constructor(leaf: WorkspaceLeaf, plugin: FabricPlugin, fabricConnectorApiUrl: string, fabricConnectorApiKey: string) {
         super(leaf);
         this.plugin = plugin;
+        this.fabricConnectorApiUrl = fabricConnectorApiUrl;
+        this.fabricConnectorApiKey = fabricConnectorApiKey;
     }
 
     getViewType(): string {
@@ -639,7 +597,7 @@ class FabricView extends ItemView {
         }
     
         try {
-            const response = await fetch(apiURL + 'fabric', {
+            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl+ 'fabric', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -697,7 +655,7 @@ class FabricView extends ItemView {
     this.animateLoadingText(this.getRandomLoadingMessage());
 
     try {
-        const response = await fetch(apiURL + 'fabric', {
+        const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/fabric', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -871,7 +829,13 @@ getCurrentModel(): string {
 
 async loadModels() {
     try {
-        const response = await fetch(apiURL + 'models');
+        const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/models', {
+            method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': this.plugin.settings.fabricConnectorApiKey
+                },
+        });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -943,7 +907,13 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
 
     async loadPatterns() {
         try {
-            const response = await fetch(apiURL + 'patterns');
+            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/patterns', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': this.plugin.settings.fabricConnectorApiKey
+                },
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -1082,10 +1052,11 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
     
     
         try {
-            const response = await fetch(apiURL + 'yt', {
+            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/yt', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-API-Key': this.plugin.settings.fabricConnectorApiKey
                 },
                 body: JSON.stringify({
                     pattern: pattern,
@@ -1140,7 +1111,7 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
     }
     
     async updatePattern(name: string, content: string) {
-        const response = await fetch(`${apiURL}update_pattern`, {
+        const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/update_pattern', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1164,206 +1135,187 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
 }
 
 class FabricSettingTab extends PluginSettingTab {
-  plugin: FabricPlugin;
+    plugin: FabricPlugin;
 
-  constructor(app: App, plugin: FabricPlugin) {
-      super(app, plugin);
-      this.plugin = plugin;
-  }
-
-  display(): void {
-      const { containerEl } = this;
-      containerEl.empty();
-    
-      const fabConnectorText = `
-This plugin requires that you have fabric and fabric connector installed.
-
-Install Instructions:
-1. [danielmiessler/fabric](https://github.com/danielmiessler/fabric)
-2. [chasebank87/fabric-connector](https://github.com/chasebank87/fabric-connector)
-
-Follow Daniel's instructions to install fabric and then to run the Fabric Connector, use the latest release
-from fabric-connector repository. Windows and MacOS packages are availble.
-      `
-      const fabConnectorRequried = containerEl.createEl('div', { cls: 'fabConnector-required' });
-      MarkdownRenderer.render(this.app, fabConnectorText, fabConnectorRequried, '', this.plugin);
-
-      new Setting(containerEl)
-        .setName ('Fabric Path')
-        .setDesc('Path to the fabric executable. If fabric is not found, provide  the full path.')
-        .addText (text => text
-          .setPlaceholder ('/path/to/fabric')
-          .setValue(this.plugin.settings.fabricPath)
-          .onChange (async (value) => {
-            this.plugin.settings.fabricPath = value;
-            await this.plugin.saveSettings();
-      }));
-    
-      new Setting(containerEl)
-          .setName('FFmpeg Path')
-          .setDesc('Path to the FFmpeg executable. If FFmpeg is not found, provide the full path.')
-          .addText(text => text
-              .setPlaceholder('/path/to/ffmpeg')
-              .setValue(this.plugin.settings.ffmpegPath)
-              .onChange(async (value) => {
-                  this.plugin.settings.ffmpegPath = value;
-                  await this.plugin.saveSettings();
-              }));
-      
-              new Setting(containerEl)
-              .setName('Tavily API Key')
-              .setDesc('Enter your Tavily API key')
-              .addText(text => text
-                  .setPlaceholder('Enter API key')
-                  .setValue(this.plugin.settings.tavilyApiKey)
-                  .onChange(async (value) => {
-                      this.plugin.settings.tavilyApiKey = value;
-                      await this.plugin.saveSettings();
-                  }));
-
-      // Add help text
-      const helpText = this.getHelpText();
-      const helpDiv = containerEl.createEl('div', { cls: 'fabric-help-text' });
-      MarkdownRenderer.render(this.app, helpText, helpDiv, '', this.plugin);
-
-      new Setting(containerEl)
-          .setName('Output Folder')
-          .setDesc('Folder to save fabric output notes')
-          .addText(text => text
-              .setPlaceholder('Enter folder path')
-              .setValue(this.plugin.settings.outputFolder)
-              .onChange(async (value) => {
-                  this.plugin.settings.outputFolder = value;
-                  await this.plugin.saveSettings();
-              }));
-      
-    new Setting(containerEl)
-    .setName('Custom Patterns Folder')
-    .setDesc('Path to your custom patterns folder within the vault')
-    .addText(text => text
-        .setPlaceholder('CustomPatterns')
-        .setValue(this.plugin.settings.customPatternsFolder)
-        .onChange(async (value) => {
-            this.plugin.settings.customPatternsFolder = value;
-            await this.plugin.saveSettings();
-        }));
-      
-    new Setting(containerEl)
-    .setName('Default Model')
-    .setDesc('Set the default model')
-    .addText(text => text
-        .setPlaceholder('Enter default model')
-        .setValue(this.plugin.settings.defaultModel)
-        .onChange(async (value) => {
-            this.plugin.settings.defaultModel = value;
-            await this.plugin.saveSettings();
-            // Update the display in the main view if it's open
-            this.app.workspace.getLeavesOfType('fabric-view').forEach((leaf) => {
-                if (leaf.view instanceof FabricView) {
-                    leaf.view.updateDefaultModelDisplay();
-                }
-            });
-        }));
-
-      const fabricTestButton = new Setting(containerEl)
-          .setName('Test Fabric Installation')
-          .setDesc('Check if fabric is correctly installed');
-
-      const fabricTestResult = fabricTestButton.controlEl.createEl('span', {
-          cls: 'test-result',
-          text: ''
-      });
-
-      fabricTestButton.addButton(btn => btn
-          .setButtonText('Test')
-          .onClick(async () => {
-              try {
-                  const patterns = await this.plugin.runFabricCommand('--list');
-                  const patternCount = patterns.split('\n').filter(Boolean).length;
-                  new Notice(`Fabric is correctly installed. ${patternCount} patterns available.`);
-                  fabricTestResult.setText('✅');
-              } catch (error) {
-                  console.error('Error testing Fabric:', error);
-                  new Notice('Failed to detect fabric. Please check the path in settings.');
-                  fabricTestResult.setText('❌');
-              }
-          }));
-
-      const ffmpegTestButton = new Setting(containerEl)
-          .setName('Test FFmpeg Installation')
-          .setDesc('Check if FFmpeg is correctly installed');
-
-      const ffmpegTestResult = ffmpegTestButton.controlEl.createEl('span', {
-          cls: 'test-result',
-          text: ''
-      });
-
-      ffmpegTestButton.addButton(btn => btn
-          .setButtonText('Test')
-          .onClick(async () => {
-              try {
-                  const { stdout, stderr } = await execAsync(`"${this.plugin.settings.ffmpegPath}" -version`);
-                  if (stderr) {
-                      console.error('FFmpeg test error:', stderr);
-                      new Notice('Failed to detect FFmpeg. Please check the path in settings.');
-                      ffmpegTestResult.setText('❌');
-                  } else {
-                      new Notice(`FFmpeg is correctly installed. ${stdout.trim()}`);
-                      ffmpegTestResult.setText('✅');
-                  }
-              } catch (error) {
-                  console.error('Error testing FFmpeg:', error);
-                  new Notice('Failed to detect FFmpeg. Please check the path in settings.');
-                  ffmpegTestResult.setText('❌');
-              }
-          }));
-      
-          new Setting(containerEl)
-          .setName('Debug Mode')
-          .setDesc('Enable debug logging')
-          .addToggle(toggle => toggle
-              .setValue(this.plugin.settings.debug)
-              .onChange(async (value) => {
-                  this.plugin.settings.debug = value;
-                  await this.plugin.saveSettings();
-                  this.plugin.updateLogging();
-              }));
-  }
-
-  getHelpText(): string {
-    const platform = os.platform();
-    let helpText = "If fabric or FFmpeg is installed for the user instead of globally, provide the full path to the binary.\n\n";
-
-    switch (platform) {
-        case 'darwin':
-            helpText += "On macOS:\n" +
-                "1. Open Terminal\n" +
-                "2. Run `which fabric` or `which ffmpeg`\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is ~/.config/fabric/patterns\n";
-            break;
-        case 'linux':
-            helpText += "On Linux:\n" +
-                "1. Open Terminal\n" +
-                "2. Run `which fabric` or `which ffmpeg`\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is ~/.config/fabric/patterns\n";
-            break;
-        case 'win32':
-            helpText += "On Windows:\n" +
-                "1. Open Command Prompt\n" +
-                "2. Run `where fabric` or `where ffmpeg`\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is %APPDATA%\\fabric\\patterns\n";
-            break;
-        default:
-            helpText += "To find the fabric or FFmpeg path:\n" +
-                "1. Open a terminal or command prompt\n" +
-                "2. Run the appropriate command to locate fabric or FFmpeg (e.g., `which fabric`, `which ffmpeg`, `where fabric`, or `where ffmpeg`)\n" +
-                "3. Copy the output path and paste it above\n" +
-                "The default fabric patterns folder is ~/.config/fabric/patterns (macOS/Linux) or %APPDATA%\\fabric\\patterns (Windows)\n";
+    constructor(app: App, plugin: FabricPlugin) {
+        super(app, plugin);
+        this.plugin = plugin;
     }
 
-    return helpText;
-  }
+    display(): void {
+        const { containerEl } = this;
+
+        containerEl.empty();
+
+        // Instructions for Fabric Connector API URL and Key
+        containerEl.createEl('p', {
+            text: 'To set up the Fabric Connector:',
+            cls: 'fabric-settings-instruction'
+        });
+        containerEl.createEl('ol', {cls: 'fabric-settings-list'}, (ol) => {
+            ol.createEl('li', {text: 'Click the Fabric Connector icon (brain icon) in your system tray'});
+            ol.createEl('li', {text: 'For the API URL: Click "Open API Docs" and copy the URL from your browser, removing "/docs" from the end'});
+            ol.createEl('li', {text: 'For the API Key: Click "Copy API Key"'});
+        });
+
+        // Fabric Connector API URL input
+        new Setting(containerEl)
+            .setName('Fabric Connector API URL')
+            .setDesc('Enter the URL for the Fabric Connector API')
+            .addDropdown(dropdown => {
+                dropdown
+                    .addOption('http://', 'http://')
+                    .addOption('https://', 'https://')
+                    .setValue(this.plugin.settings.fabricConnectorApiUrl.startsWith('https://') ? 'https://' : 'http://')
+                    .onChange(async (value) => {
+                        const domain = this.plugin.settings.fabricConnectorApiUrl.replace(/^https?:\/\//, '');
+                        this.plugin.settings.fabricConnectorApiUrl = value + domain;
+                        await this.plugin.saveSettings();
+                    });
+            })
+            .addText(text => {
+                const domain = this.plugin.settings.fabricConnectorApiUrl.replace(/^https?:\/\//, '');
+                text
+                    .setPlaceholder('Enter domain')
+                    .setValue(domain)
+                    .onChange(async (value) => {
+                        // Remove any slashes from the input
+                        const cleanValue = value.replace(/\//g, '');
+                        const protocol = this.plugin.settings.fabricConnectorApiUrl.startsWith('https://') ? 'https://' : 'http://';
+                        this.plugin.settings.fabricConnectorApiUrl = protocol + cleanValue;
+                        await this.plugin.saveSettings();
+                        // Update the text field to show the cleaned value
+                        text.setValue(cleanValue);
+                    });
+            });
+
+        // Fabric Connector API Key input
+        new Setting(containerEl)
+            .setName('Fabric Connector API Key')
+            .setDesc('Enter your API key for the Fabric Connector')
+            .addText(text => text
+                .setPlaceholder('Enter API Key')
+                .setValue(this.plugin.settings.fabricConnectorApiKey || '')
+                .onChange(async (value) => {
+                    this.plugin.settings.fabricConnectorApiKey = value;
+                    await this.plugin.saveSettings();
+                }))
+            .addButton(button => button
+                .setButtonText('Test API Key')
+                .onClick(async () => {
+                    await this.testFabricConnectorApiKey();
+                }));
+
+
+        new Setting(containerEl)
+            .setName('Tavily API Key')
+            .setDesc('Enter your Tavily API key')
+            .addText(text => text
+                .setPlaceholder('Enter API Key')
+                .setValue(this.plugin.settings.tavilyApiKey || '')
+                .onChange(async (value) => {
+                    this.plugin.settings.tavilyApiKey = value;
+                    await this.plugin.saveSettings();
+                }))
+            .addButton(button => button
+                .setButtonText('Test API Key')
+                .onClick(async () => {
+                    await this.testTavilyApiKey();
+                }));
+
+        new Setting(containerEl)
+            .setName('Output Folder')
+            .setDesc('Folder to save output files')
+            .addText(text => text
+                .setPlaceholder('Enter folder path')
+                .setValue(this.plugin.settings.outputFolder)
+                .onChange(async (value) => {
+                    this.plugin.settings.outputFolder = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Custom Patterns Folder')
+            .setDesc('Folder to store custom patterns')
+            .addText(text => text
+                .setPlaceholder('Enter folder path')
+                .setValue(this.plugin.settings.customPatternsFolder)
+                .onChange(async (value) => {
+                    this.plugin.settings.customPatternsFolder = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.registerCustomPatternsFolderWatcher();
+                }));
+
+        new Setting(containerEl)
+            .setName('Debug Mode')
+            .setDesc('Enable debug logging')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.debug)
+                .onChange(async (value) => {
+                    this.plugin.settings.debug = value;
+                    await this.plugin.saveSettings();
+                    this.plugin.updateLogging();
+                }));
+    }
+
+    async testFabricConnectorApiKey() {
+        const fabricConnectorApiUrl = this.plugin.settings.fabricConnectorApiUrl;
+        const apiKey = this.plugin.settings.fabricConnectorApiKey;
+
+        if (!fabricConnectorApiUrl || !apiKey) {
+            new Notice('Please enter both Fabric Connector API URL and API Key');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${fabricConnectorApiUrl}/models`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey
+                }
+            });
+
+            if (response.ok) {
+                new Notice('Fabric Connector API Key is valid');
+            } else {
+                new Notice('Invalid Fabric Connector API Key');
+            }
+        } catch (error) {
+            console.error('Error testing Fabric Connector API Key:', error);
+            new Notice('Error testing Fabric Connector API Key. Check console for details.');
+        }
+    }
+
+    async testTavilyApiKey() {
+        const apiKey = this.plugin.settings.tavilyApiKey;
+
+        if (!apiKey) {
+            new Notice('Please enter a Tavily API Key');
+            return;
+        }
+
+        try {
+            const response = await fetch('https://api.tavily.com/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey
+                },
+                body: JSON.stringify({
+                    query: 'Test query',
+                    max_results: 1
+                })
+            });
+
+            if (response.ok) {
+                new Notice('Tavily API Key is valid');
+            } else {
+                new Notice('Invalid Tavily API Key');
+            }
+        } catch (error) {
+            console.error('Error testing Tavily API Key:', error);
+            new Notice('Error testing Tavily API Key. Check console for details.');
+        }
+    }
 }
