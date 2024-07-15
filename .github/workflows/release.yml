@@ -1,4 +1,4 @@
-name: Unofficial Fabric Integration
+name: Release Obsidian plugin
 
 on:
   push:
