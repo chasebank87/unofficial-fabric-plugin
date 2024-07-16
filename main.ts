@@ -227,7 +227,8 @@ export default class FabricPlugin extends Plugin {
     }
 
     async getDefaultShell(): Promise<string> {
-        if (os.platform() === 'win32') {
+        // Use Platform.isWin instead of os.platform() to detect Windows
+        if (Platform.isWin) {
             return 'cmd.exe';
         }
         try {
@@ -372,7 +373,7 @@ class FabricView extends ItemView {
       contentContainer.createEl('h3', { text: 'fabric', cls: 'fabric-title' });
 
       this.buttonsContainer = contentContainer.createEl('div', { cls: 'fabric-buttons' });
-      const currentNoteBtn = this.buttonsContainer.createEl('button', { text: 'Current Note', cls: 'fabric-button current-note' });
+      const currentNoteBtn = this.buttonsContainer.createEl('button', { text: 'Current note', cls: 'fabric-button current-note' });
       const clipboardBtn = this.buttonsContainer.createEl('button', { text: 'Clipboard', cls: 'fabric-button clipboard' });
 
       const tavilyBtn = this.buttonsContainer.createEl('button', { text: 'Tavily', cls: 'fabric-button tavily' });
@@ -1287,6 +1288,7 @@ class FabricSettingTab extends PluginSettingTab {
             console.error('Error testing Fabric Connector API Key:', error);
             new Notice('Error testing Fabric Connector API Key. Check console for details.');
         }
+
     }
 
     async testTavilyApiKey() {
