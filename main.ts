@@ -1248,6 +1248,17 @@ class FabricSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                     this.plugin.registerCustomPatternsFolderWatcher();
                 }));
+        
+        new Setting(containerEl)
+        .setName('Default Model')
+        .setDesc('The default model to use when running Fabric')
+        .addText(text => text
+            .setPlaceholder('Enter default model')
+            .setValue(this.plugin.settings.defaultModel)
+            .onChange(async (value) => {
+            this.plugin.settings.defaultModel = value;
+            await this.plugin.saveSettings();
+            }));
 
         new Setting(containerEl)
             .setName('Debug Mode')
