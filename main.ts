@@ -344,12 +344,12 @@ class FabricView extends ItemView {
 
 
         this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
-            const logo = this.logoContainer.createEl('img', {
-                cls: 'fabric-logo',
-                attr: { 
-                    src: this.plugin.app.vault.adapter.getResourcePath(this.plugin.manifest.dir + '/fabric-logo-gif.gif')
-                }
-            });
+        const logo = this.logoContainer.createEl('img', {
+            cls: 'fabric-logo',
+            attr: { 
+                src: 'https://raw.githubusercontent.com/chasebank87/unofficial-fabric-plugin/main/fabric-logo-gif.gif'
+            }
+        });
         this.loadingText = this.logoContainer.createEl('h6', { cls: 'fabric-loading-text' });
 
         const contentContainer = this.containerEl.createEl('div', { cls: 'fabric-content' });
