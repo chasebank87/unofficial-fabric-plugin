@@ -2,113 +2,70 @@
 
 ## Overview
 
-This plugin integrates the Fabric tool into Obsidian, allowing users to run Fabric commands directly from within the Obsidian interface. It also supports FFmpeg for additional functionalities and provides a user-friendly interface for managing settings and running commands.
+The Fabric Plugin is an advanced integration tool for Obsidian, designed to enhance content creation and management within the Obsidian ecosystem. It connects to external APIs to fetch and manipulate data based on user-defined patterns and models. The plugin also supports custom pattern management and YouTube link detection.
 
 ## Features
 
-- **Fabric Command Execution**: Run Fabric commands on the current note or clipboard content.
-- **Pattern Search**: Search and select Fabric patterns.
-- **YouTube Link Detection**: Automatically detect and process YouTube links.
-- **Settings Management**: Configure paths for Fabric and FFmpeg executables.
-- **Pattern Refresh**: Refresh available Fabric patterns from the API.
-- **Output Note Creation**: Save Fabric command outputs as new notes in a specified folder.
+- **Custom Pattern Management**: Watch for changes in a designated folder and sync patterns.
+- **YouTube Link Detection**: Automatically detect YouTube links in notes.
+- **External API Integration**: Connect to Fabric Connector API and Tavily API for enhanced content manipulation.
+- **Dynamic Content Rendering**: Render content dynamically based on user interactions and API responses.
+- **Debugging Support**: Toggle debug mode for additional logging.
 
-## Installation
-
-### Prerequisites
+## Prerequisites
 
 1. **Fabric**: Install Fabric from [danielmiessler/fabric](https://github.com/danielmiessler/fabric).
 2. **Fabric Connector**: Install Fabric Connector from [chasebank87/fabric-connector](https://github.com/chasebank87/fabric-connector).
 
-### Steps
+## Installation
 
-1. Follow the installation instructions provided in the respective repositories for Fabric and Fabric Connector.
-2. Ensure that both Fabric and FFmpeg are installed and accessible from your system's PATH.
+To install the Fabric Plugin, follow these steps:
 
-## Settings
+1. Download the plugin from the official repository.
+2. Place the plugin in your Obsidian's plugins folder.
+3. Enable the plugin from Obsidian's settings under "Community Plugins".
 
-### Fabric Path
+## Configuration
 
-Path to the Fabric executable. If Fabric is not found, provide the full path.
+Configure the plugin by setting up the necessary API URLs and keys through the plugin settings tab in Obsidian.
 
-### FFmpeg Path
+### Settings
 
-Path to the FFmpeg executable. If FFmpeg is not found, provide the full path.
+- `Fabric Connector API URL`: URL to the Fabric Connector API.
+- `Fabric Connector API Key`: Authentication key for the Fabric Connector API.
+- `Output Folder`: Default folder path where output files will be saved.
+- `Custom Patterns Folder`: Folder path for storing and managing custom patterns.
+- `YouTube Autodetect Enabled`: Toggle to enable or disable automatic YouTube link detection.
+- `Default Model`: Default model used for data processing.
+- `Debug`: Enable or disable debug mode for logging.
 
-### Output Folder
+### Usage
 
-Folder to save Fabric output notes.
+1. **Pattern Management**: Add or remove markdown files in the custom patterns folder to manage patterns.
+2. **YouTube Transcription**: Autodetect youtube links in current note or clipboard and transcribe them using whisper and then running a pattern against.
+3. **Tavily Search**: Use the Tavily API to search for relevant content, and process through results through the selected pattern.
+4. **Input Sources**: 
+	1. ***Current Note***: Uses the current active note as the source to be sent to fabric.
+	2. ***Clipboard***: Uses the clipboard as the source to be sent to fabric.
+	3. ***Tavily***: Uses Tavily Search results as the source to be sent to fabric.
+5. **Pattern Selection**: Choose a pattern from the available custom or built in patterns to process the input data.
+6. **Models**: Select a model from the available options to process the input data and pattern.
+7. **Upload Patterns**: One way sync to fabric, will create if the custom pattern does not exist, and update if it does
+8. **Update Patterns and Models**: Refreshes the models and patterns displayed in the dropdowns.
 
-### YouTube Autodetect
+### Demonstration
 
-Toggle to enable or disable automatic detection of YouTube links in the content.
+![currentNote](https://github.com/chasebank87/unofficial-fabric-plugin)
+### Debugging
 
-## Usage
+Toggle the debug mode in settings to view detailed logs in the console. This can help in tracing issues and understanding the flow of data.
 
-### Running Fabric Commands
-
-1. **Current Note**: Run a Fabric command on the content of the currently active note.
-2. **Clipboard**: Run a Fabric command on the content copied to the clipboard.
-3. **Pattern**: Select a pattern from the dropdown and run a Fabric command using that pattern.
-
-### YouTube Link Detection
-
-If YouTube autodetect is enabled, the plugin will scan for YouTube links in the content and prompt you to select a link to process.
-
-### Refresh Patterns
-
-Click the refresh button to reload available patterns from the API.
-
-## Testing Installations
-
-### Test Fabric Installation
-
-1. Go to the plugin settings.
-2. Click the "Test" button under "Test Fabric Installation".
-3. A notice will indicate whether Fabric is correctly installed and how many patterns are available.
-
-### Test FFmpeg Installation
-
-1. Go to the plugin settings.
-2. Click the "Test" button under "Test FFmpeg Installation".
-3. A notice will indicate whether FFmpeg is correctly installed.
-
-## Help Text
-
-If Fabric or FFmpeg is installed for the user instead of globally, provide the full path to the binary.
-
-### macOS
-
-1. Open Terminal.
-2. Run `which fabric` or `which ffmpeg`.
-3. Copy the output path and paste it in the settings.
-
-The default fabric patterns folder is `~/.config/fabric/patterns`.
-
-### Linux
-
-1. Open Terminal.
-2. Run `which fabric` or `which ffmpeg`.
-3. Copy the output path and paste it in the settings.
-
-The default fabric patterns folder is `~/.config/fabric/patterns`.
-
-### Windows
-
-1. Open Command Prompt.
-2. Run `where fabric` or `where ffmpeg`.
-3. Copy the output path and paste it in the settings.
-
-The default fabric patterns folder is `%APPDATA%\fabric\patterns`.
-
-## Contributing
-
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+Contributions are welcome. Please fork the repository, make changes, and submit a pull request for review.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
-For more information, visit the [official documentation](https://github.com/danielmiessler/fabric) and [Fabric Connector repository](https://github.com/chasebank87/fabric-connector).
+For more information on usage and configuration, refer to the detailed comments within the codebase or visit the [Fabric Plugin Documentation](#).
