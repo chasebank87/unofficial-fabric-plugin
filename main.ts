@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS: FabricPluginSettings = {
     outputFolder: '',
     customPatternsFolder: '',
     youtubeAutodetectEnabled: true,
-    defaultModel: '',
+    defaultModel: 'gpt-4o',
     debug: false,
     tavilyApiKey: ''
 };
@@ -1314,12 +1314,12 @@ class FabricSettingTab extends PluginSettingTab {
             const response = await fetch('https://api.tavily.com/search', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-Key': this.plugin.settings.tavilyApiKey
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    query: 'Test query',
-                    max_results: 1
+                    query: 'Test Query',
+                    max_results: 1,
+                    api_key: apiKey
                 })
             });
 
