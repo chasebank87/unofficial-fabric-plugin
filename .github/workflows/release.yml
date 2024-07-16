@@ -31,4 +31,4 @@ jobs:
           gh release create "$tag" \
             --title="$tag" \
             --draft \
-            main.js manifest.json styles.css fabric-logo-gif.gif currentNote-demo.gif
+            main.js manifest.json styles.css fabric-logo-gif.gif
