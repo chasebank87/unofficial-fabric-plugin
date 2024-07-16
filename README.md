@@ -55,7 +55,7 @@ Configure the plugin by setting up the necessary API URLs and keys through the p
 
 ### Demonstration
 
-![currentNote](https://github.com/chasebank87/unofficial-fabric-plugin)
+[![currentNote](https://github.com/chasebank87/unofficial-fabric-plugin)](https://github.com/chasebank87/unofficial-fabric-plugin/blob/main/currentNote-demo.gif)
 ### Debugging
 
 Toggle the debug mode in settings to view detailed logs in the console. This can help in tracing issues and understanding the flow of data.
