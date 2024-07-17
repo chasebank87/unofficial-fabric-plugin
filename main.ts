@@ -570,7 +570,8 @@ class FabricView extends ItemView {
             }
     
             const data = await response.json();
-            await this.runFabricWithTavilyResult(data);
+            const searchResult = JSON.stringify(data);
+            await this.runFabricWithTavilyResult(searchResult);
         } catch (error) {
             console.error('Failed to perform Tavily search:', error);
             new Notice('Failed to perform Tavily search. Please check your API key and try again.');
@@ -580,7 +581,7 @@ class FabricView extends ItemView {
         }
     }
     
-    async runFabricWithTavilyResult(searchResult: any) {
+    async runFabricWithTavilyResult(searchResult: string) {
         const pattern = this.searchInput.value.trim();
         const model = this.getCurrentModel();
         let outputNoteName = this.outputNoteInput.value.trim();
