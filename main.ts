@@ -1118,6 +1118,7 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-API-Key': this.plugin.settings.fabricConnectorApiKey
             },
             body: JSON.stringify({
                 pattern: name,
