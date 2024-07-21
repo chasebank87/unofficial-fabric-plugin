@@ -39,6 +39,7 @@ export default class FabricPlugin extends Plugin {
     async onload() {
         await this.loadSettings();
         this.updateLogging();
+        await this.checkAndDownloadLogo(); 
         await this.loadSettings();
         this.registerCustomPatternsFolderWatcher();
 
@@ -164,6 +165,30 @@ export default class FabricPlugin extends Plugin {
         const confirmDelete = await this.confirmPatternDeletion(patternName);
         if (confirmDelete) {
             await this.deletePatternFromFabric(patternName);
+        }
+    }
+
+    async checkAndDownloadLogo() {
+        if (!this.manifest.dir) {
+            console.error('Plugin directory is undefined');
+            return;
+        }
+    
+        const logoPath = path.join(this.manifest.dir, 'fabric-logo-gif.gif');
+        const logoExists = await this.app.vault.adapter.exists(logoPath);
+    
+        if (!logoExists) {
+            try {
+                const logoUrl = 'https://raw.githubusercontent.com/chasebank87/unofficial-fabric-plugin/main/fabric-logo-gif.gif';
+                const response = await fetch(logoUrl);
+                if (!response.ok) throw new Error('Failed to fetch logo');
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = new Uint8Array(arrayBuffer);
+                await this.app.vault.adapter.writeBinary(logoPath, buffer);
+                this.log('Fabric logo downloaded successfully');
+            } catch (error) {
+                console.error('Error downloading Fabric logo:', error);
+            }
         }
     }
 
@@ -344,11 +369,19 @@ class FabricView extends ItemView {
 
 
         this.logoContainer = this.containerEl.createEl('div', { cls: 'fabric-logo-container' });
+        let logoPath: string;
+        if (this.plugin.manifest && this.plugin.manifest.dir) {
+            logoPath = path.join(this.plugin.manifest.dir, 'fabric-logo-gif.gif');
+            const logoSrc = this.app.vault.adapter.getResourcePath(logoPath);
+        } else {
+            // Fallback to the GitHub URL if the plugin directory is undefined
+            logoPath = 'https://raw.githubusercontent.com/chasebank87/unofficial-fabric-plugin/main/fabric-logo-gif.gif';
+        }
+
+        const logoSrc = this.app.vault.adapter.getResourcePath(logoPath);
         const logo = this.logoContainer.createEl('img', {
             cls: 'fabric-logo',
-            attr: { 
-                src: 'https://raw.githubusercontent.com/chasebank87/unofficial-fabric-plugin/main/fabric-logo-gif.gif'
-            }
+            attr: { src: logoSrc }
         });
         this.loadingText = this.logoContainer.createEl('h6', { cls: 'fabric-loading-text' });
 
