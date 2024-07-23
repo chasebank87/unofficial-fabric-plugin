@@ -13,6 +13,8 @@ The Fabric Plugin is an advanced integration tool for Obsidian, designed to enha
 ## Features
 
 - **Custom Pattern Management**: Watch for changes in a designated folder and sync patterns.
+- **Community Custom Patterns**: Download and share custom patterns with other fabric users. 
+  - [Fork repo to submit your patterns](https://github.com/chasebank87/fabric-patterns)
 - **YouTube Link Detection**: Automatically detect YouTube links in notes.
 - **External API Integration**: Connect to Fabric Connector API and Tavily API for enhanced content manipulation.
 - **Dynamic Content Rendering**: Render content dynamically based on user interactions and API responses.
