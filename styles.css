@@ -576,3 +576,127 @@
   width: 300%;
   height: 300%;
 }
+.community-patterns-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1.25rem;
+  color: var(--text-normal);
+}
+
+.community-patterns-search {
+  width: 100%;
+  max-width: 28.125rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.3125rem;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 0 0.625rem rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+}
+
+.community-patterns-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+
+.community-pattern-item {
+  background-color: var(--background-secondary);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  min-height: 2rem;
+  width: 100%;
+}
+
+.community-pattern-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex-grow: 1;
+  overflow: hidden;
+  text-align: left;
+}
+
+.community-pattern-title {
+  font-size: 0.8125rem;
+  font-weight: bold;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.community-pattern-description {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.community-pattern-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.community-pattern-download,
+.community-pattern-update,
+.community-pattern-uninstall {
+  padding: 0.125rem 0.25rem;
+  font-size: 0.6875rem;
+  min-width: 3rem;
+  border: none;
+  border-radius: 0.1875rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.community-pattern-download {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.community-pattern-update {
+  background-color: var(--text-accent);
+  color: var(--text-on-accent);
+}
+
+.community-pattern-uninstall {
+  background-color: var(--text-error);
+  color: var(--text-on-accent);
+}
+
+.community-pattern-download:hover,
+.community-pattern-update:hover,
+.community-pattern-uninstall:hover {
+  opacity: 0.8;
+}
+
+.fabric-icon-button.community-patterns {
+  position: absolute;
+  bottom: 0.625rem;
+  right: 5.6rem;
+  background-color: var(--interactive-normal);
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.fabric-icon-button.community-patterns:hover {
+  color: var(--text-on-accent);
+}

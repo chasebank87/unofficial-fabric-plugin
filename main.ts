@@ -1,4 +1,4 @@
-import { App, Platform, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, TFolder, TAbstractFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal, ViewState} from 'obsidian';
+import { App, Platform, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, TFile, TFolder, TAbstractFile, Notice, ItemView, MarkdownRenderer, setIcon, Modal, ViewState, ButtonComponent} from 'obsidian';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -45,6 +45,14 @@ export default class FabricPlugin extends Plugin {
 
         this.app.workspace.onLayoutReady(() => {
             this.registerCustomPatternsFolderWatcher();
+        });
+
+        this.addCommand({
+            id: 'open-community-patterns',
+            name: 'Open Community Patterns',
+            callback: () => {
+              new CommunityPatternsModal(this.app, this).open();
+            }
         });
 
         this.addSettingTab(new FabricSettingTab(this.app, this));
@@ -296,6 +304,7 @@ class FabricView extends ItemView {
     patternsSyncButton: HTMLElement;
     containerEl: HTMLElement;
     refreshButton: HTMLElement;
+    communityPatternsBtn: HTMLElement;
     logoContainer: HTMLElement;
     loadingText: HTMLElement;
     ytSwitch: HTMLInputElement;
@@ -361,6 +370,10 @@ class FabricView extends ItemView {
     getDisplayText(): string {
         return 'Fabric';
     }
+
+    showCommunityPatternsModal() {
+        new CommunityPatternsModal(this.app, this.plugin).open();
+      }
 
     async onOpen() {
         this.containerEl = this.contentEl;
@@ -520,6 +533,16 @@ class FabricView extends ItemView {
     this.syncButton.onclick = async () => {
         await this.syncCustomPatterns();
     };
+        
+    this.communityPatternsBtn = contentContainer.createEl('button', {
+        cls: 'fabric-icon-button  community-patterns',
+        attr: {
+            'aria-label': 'Download community patterns'
+        }
+    });
+        setIcon(this.communityPatternsBtn, 'download');
+        
+      this.communityPatternsBtn.onclick = () => this.showCommunityPatternsModal();
   
 
 
@@ -1366,4 +1389,194 @@ class FabricSettingTab extends PluginSettingTab {
             new Notice('Error testing Tavily API Key. Check console for details.');
         }
     }
+}
+
+
+class CommunityPatternsModal extends Modal {
+  plugin: FabricPlugin;
+  patterns: any[];
+  searchInput: HTMLInputElement;
+  resultsContainer: HTMLElement;
+
+  constructor(app: App, plugin: FabricPlugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+
+  async onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    contentEl.createEl('h2', { text: 'Community Patterns', cls: 'community-patterns-title' });
+
+    // Add Update All button
+    const updateAllButton = new ButtonComponent(contentEl)
+      .setButtonText('Update All')
+      .onClick(() => this.updateAllPatterns());
+
+    this.searchInput = contentEl.createEl('input', {
+      type: 'text',
+      placeholder: 'Search patterns...',
+      cls: 'community-patterns-search'
+    });
+    this.searchInput.addEventListener('input', () => this.updateResults());
+
+    this.resultsContainer = contentEl.createEl('div', { cls: 'community-patterns-results' });
+
+    await this.fetchPatterns();
+    this.updateResults();
+  }
+
+  async fetchPatterns() {
+    try {
+      const response = await fetch('https://raw.githubusercontent.com/chasebank87/fabric-patterns/main/patterns.json');
+      if (!response.ok) {
+        throw new Error('Failed to fetch patterns');
+      }
+      const data = await response.json();
+      this.patterns = Object.keys(data.patterns).map(key => ({
+        name: key,
+        ...data.patterns[key]
+      }));
+    } catch (error) {
+      console.error('Error fetching patterns:', error);
+      new Notice('Failed to fetch patterns');
+    }
+  }
+
+  async isPatternInstalled(patternName: string): Promise<boolean> {
+    const file = `${this.plugin.settings.customPatternsFolder}/${patternName}.md`;
+    return await this.app.vault.adapter.exists(file);
+  }
+
+  async doesPatternNeedUpdate(patternName: string): Promise<boolean> {
+    const installedPath = `${this.plugin.settings.customPatternsFolder}/${patternName}.md`;
+    const repoPath = `https://raw.githubusercontent.com/chasebank87/fabric-patterns/main/patterns/${patternName}.md`;
+
+    const installedContent = await this.app.vault.adapter.read(installedPath);
+    const response = await fetch(repoPath);
+    if (!response.ok) {
+      throw new Error('Failed to fetch pattern content');
+    }
+    const repoContent = await response.text();
+
+    return installedContent !== repoContent;
+  }
+
+  async updateResults() {
+    const searchTerm = this.searchInput.value.toLowerCase();
+    const filteredPatterns = this.patterns.filter(pattern =>
+      pattern.name.toLowerCase().includes(searchTerm) ||
+      pattern.description.toLowerCase().includes(searchTerm) ||
+      pattern.author.toLowerCase().includes(searchTerm)
+    );
+
+    this.resultsContainer.empty();
+    for (const pattern of filteredPatterns) {
+      const patternEl = this.resultsContainer.createEl('div', { cls: 'community-pattern-item' });
+
+      const patternInfo = patternEl.createEl('div', { cls: 'community-pattern-info' });
+      patternInfo.createEl('div', { text: pattern.name, cls: 'community-pattern-title' });
+      patternInfo.createEl('div', { text: pattern.description, cls: 'community-pattern-description' });
+      patternInfo.createEl('em', {text: `by ${pattern.author}`, cls: 'community-fabric-author'});
+      patternInfo.createEl('small', { text: `For models: ${pattern.for_models}`, cls: 'community-fabric-models' });
+
+
+
+      const isInstalled = await this.isPatternInstalled(pattern.name);
+      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name);
+
+      const buttonContainer = patternEl.createEl('div', { cls: 'community-pattern-buttons' });
+
+      if (!isInstalled) {
+        const downloadBtn = new ButtonComponent(buttonContainer)
+          .setButtonText('')
+          .onClick(() => this.downloadPattern(pattern.name));
+        downloadBtn.buttonEl.className = 'community-pattern-download';
+        setIcon(downloadBtn.buttonEl, 'download');
+      } else {
+        if (needsUpdate) {
+          const updateBtn = new ButtonComponent(buttonContainer)
+            .setButtonText('')
+            .onClick(() => this.updatePattern(pattern.name));
+          updateBtn.buttonEl.className = 'community-pattern-update';
+          setIcon(updateBtn.buttonEl, 'refresh-cw');
+        }
+        const uninstallBtn = new ButtonComponent(buttonContainer)
+          .setButtonText('')
+          .onClick(() => this.uninstallPattern(pattern.name));
+        uninstallBtn.buttonEl.className = 'community-pattern-uninstall';
+        setIcon(uninstallBtn.buttonEl, 'trash');
+      }
+    }
+  }
+    
+  async downloadPattern(patternName: string) {
+    try {
+      const response = await fetch(`https://raw.githubusercontent.com/chasebank87/fabric-patterns/main/patterns/${patternName}.md`);
+      if (!response.ok) {
+        throw new Error('Failed to download pattern');
+      }
+      const content = await response.text();
+
+      const file = `${this.plugin.settings.customPatternsFolder}/${patternName}.md`;
+      await this.app.vault.create(file, content);
+
+      new Notice(`Pattern ${patternName} downloaded successfully`);
+      this.updateResults();
+    } catch (error) {
+      console.error('Error downloading pattern:', error);
+      new Notice('Failed to download pattern');
+    }
+  }
+
+  async updatePattern(patternName: string) {
+    try {
+      const response = await fetch(`https://raw.githubusercontent.com/chasebank87/fabric-patterns/main/patterns/${patternName}.md`);
+      if (!response.ok) {
+        throw new Error('Failed to update pattern');
+      }
+      const content = await response.text();
+
+      const file = `${this.plugin.settings.customPatternsFolder}/${patternName}.md`;
+      await this.app.vault.adapter.write(file, content);
+
+      new Notice(`Pattern ${patternName} updated successfully`);
+      this.updateResults();
+    } catch (error) {
+      console.error('Error updating pattern:', error);
+      new Notice('Failed to update pattern');
+    }
+  }
+
+  async uninstallPattern(patternName: string) {
+    try {
+      const file = `${this.plugin.settings.customPatternsFolder}/${patternName}.md`;
+      await this.app.vault.adapter.remove(file);
+      new Notice(`Pattern ${patternName} uninstalled successfully`);
+      this.updateResults();
+    } catch (error) {
+      console.error('Error uninstalling pattern:', error);
+      new Notice('Failed to uninstall pattern');
+    }
+  }
+
+  async updateAllPatterns() {
+    let updatedCount = 0;
+    for (const pattern of this.patterns) {
+      const isInstalled = await this.isPatternInstalled(pattern.name);
+      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name);
+      if (needsUpdate) {
+        await this.updatePattern(pattern.name);
+        updatedCount++;
+      }
+    }
+    new Notice(`Updated ${updatedCount} patterns`);
+    this.updateResults();
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
 }
