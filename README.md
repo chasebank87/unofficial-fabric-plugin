@@ -79,3 +79,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For more information on usage and configuration, refer to the detailed comments within the codebase or visit the [Fabric Plugin Documentation](#).
 
 
+# my_fabric_patterns
