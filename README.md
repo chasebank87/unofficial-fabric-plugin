@@ -1,5 +1,11 @@
 # Fabric Plugin for Obsidian
 
+If you like this plugin, feel free to support the development by buying a coffee:
+<div>
+<img src="bmc_qr.png" height=80px>
+<a href="https://www.buymeacoffee.com/chasebank87" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" alt="Buy Me A Coffee" style="height: 80px !important;width: 250px !important;" ></a>
+</div>
+
 ## Overview
 
 The Fabric Plugin is an advanced integration tool for Obsidian, designed to enhance content creation and management within the Obsidian ecosystem. It connects to external APIs to fetch and manipulate data based on user-defined patterns and models. The plugin also supports custom pattern management and YouTube link detection.
@@ -69,3 +75,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 For more information on usage and configuration, refer to the detailed comments within the codebase or visit the [Fabric Plugin Documentation](#).
+
+
