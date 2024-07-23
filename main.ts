@@ -1449,9 +1449,9 @@ class CommunityPatternsModal extends Modal {
     return await this.app.vault.adapter.exists(file);
   }
 
-  async doesPatternNeedUpdate(patternName: string, forked_github: string): Promise<boolean> {
+  async doesPatternNeedUpdate(patternName: string, pattern_repo: string): Promise<boolean> {
     const installedPath = `${this.plugin.settings.customPatternsFolder}/${patternName}.md`;
-    const repoPath = 'https://raw.githubusercontent.com/'+ forked_github + '/main/patterns/' + patternName + '.md';
+    const repoPath = 'https://raw.githubusercontent.com/'+ pattern_repo + '/main/patterns/' + patternName + '.md';
 
       const installedContent = await this.app.vault.adapter.read(installedPath); 
     const response = await fetch(repoPath);
@@ -1484,21 +1484,21 @@ class CommunityPatternsModal extends Modal {
 
 
       const isInstalled = await this.isPatternInstalled(pattern.name);
-      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name, pattern.forked_github);
+      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name, pattern.pattern_repo);
 
       const buttonContainer = patternEl.createEl('div', { cls: 'community-pattern-buttons' });
 
       if (!isInstalled) {
         const downloadBtn = new ButtonComponent(buttonContainer)
           .setButtonText('')
-          .onClick(() => this.downloadPattern(pattern.name, pattern.forked_github));
+          .onClick(() => this.downloadPattern(pattern.name, pattern.pattern_repo));
         downloadBtn.buttonEl.className = 'community-pattern-download';
         setIcon(downloadBtn.buttonEl, 'download');
       } else {
         if (needsUpdate) {
           const updateBtn = new ButtonComponent(buttonContainer)
             .setButtonText('')
-            .onClick(() => this.updatePattern(pattern.name, pattern.forked_github));
+            .onClick(() => this.updatePattern(pattern.name, pattern.pattern_repo));
           updateBtn.buttonEl.className = 'community-pattern-update';
           setIcon(updateBtn.buttonEl, 'refresh-cw');
         }
@@ -1511,9 +1511,9 @@ class CommunityPatternsModal extends Modal {
     }
   }
     
-  async downloadPattern(patternName: string, forked_github: string) {
+  async downloadPattern(patternName: string, pattern_repo: string) {
       try {
-          let patternUrl = 'https://raw.githubusercontent.com/'+ forked_github + '/main/patterns/' + patternName + '.md';
+          let patternUrl = 'https://raw.githubusercontent.com/'+ pattern_repo + '/main/patterns/' + patternName + '.md';
             console.log(patternUrl);
         const response = await fetch(patternUrl);
       if (!response.ok) {
@@ -1532,9 +1532,9 @@ class CommunityPatternsModal extends Modal {
     }
   }
 
-  async updatePattern(patternName: string, forked_github: string) {
+  async updatePattern(patternName: string, pattern_repo: string) {
       try {
-        let patternUrl = 'https://raw.githubusercontent.com/'+ forked_github + '/main/patterns/' + patternName + '.md';
+        let patternUrl = 'https://raw.githubusercontent.com/'+ pattern_repo + '/main/patterns/' + patternName + '.md';
         const response = await fetch(patternUrl);
       if (!response.ok) {
         throw new Error('Failed to update pattern');
@@ -1568,9 +1568,9 @@ class CommunityPatternsModal extends Modal {
     let updatedCount = 0;
     for (const pattern of this.patterns) {
       const isInstalled = await this.isPatternInstalled(pattern.name);
-      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name, pattern.forked_github);
+      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name, pattern.pattern_repo);
       if (needsUpdate) {
-        await this.updatePattern(pattern.name, pattern.forked_github);
+        await this.updatePattern(pattern.name, pattern.pattern_repo);
         updatedCount++;
       }
     }
