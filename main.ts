@@ -1409,10 +1409,22 @@ class CommunityPatternsModal extends Modal {
 
     contentEl.createEl('h2', { text: 'Community Patterns', cls: 'community-patterns-title' });
 
-    // Add Update All button
-    const updateAllButton = new ButtonComponent(contentEl)
+      // Add Update All button
+      
+      const buttonContainer = contentEl.createDiv({ cls: 'community-patterns-button-container' });
+
+      const updateAllButton = new ButtonComponent(buttonContainer)
       .setButtonText('Update All')
       .onClick(() => this.updateAllPatterns());
+    //setIcon(updateAllButton.buttonEl, 'refresh-cw'); // Use an appropriate icon
+      updateAllButton.buttonEl.className = 'fabric-button community-patterns-update-all';
+      
+      const refreshPatternsButton = new ButtonComponent(buttonContainer)
+      .setButtonText('Refresh Patterns')
+      .onClick(() => this.refreshPatterns());
+    //setIcon(refreshPatternsButton.buttonEl, 'refresh-cw'); // Use an appropriate icon
+    refreshPatternsButton.buttonEl.className = 'fabric-button community-patterns-refresh';
+
 
     this.searchInput = contentEl.createEl('input', {
       type: 'text',
@@ -1471,45 +1483,57 @@ class CommunityPatternsModal extends Modal {
       pattern.author.toLowerCase().includes(searchTerm)
     );
 
-    this.resultsContainer.empty();
+    this.resultsContainer.empty(); 
     for (const pattern of filteredPatterns) {
-      const patternEl = this.resultsContainer.createEl('div', { cls: 'community-pattern-item' });
-
-      const patternInfo = patternEl.createEl('div', { cls: 'community-pattern-info' });
-      patternInfo.createEl('div', { text: pattern.name, cls: 'community-pattern-title' });
-      patternInfo.createEl('div', { text: pattern.description, cls: 'community-pattern-description' });
-      patternInfo.createEl('em', {text: `by ${pattern.author}`, cls: 'community-fabric-author'});
-      patternInfo.createEl('small', { text: `For models: ${pattern.for_models}`, cls: 'community-fabric-models' });
-
-
-
-      const isInstalled = await this.isPatternInstalled(pattern.name);
-      const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name, pattern.pattern_repo);
-
-      const buttonContainer = patternEl.createEl('div', { cls: 'community-pattern-buttons' });
-
-      if (!isInstalled) {
-        const downloadBtn = new ButtonComponent(buttonContainer)
-          .setButtonText('')
-          .onClick(() => this.downloadPattern(pattern.name, pattern.pattern_repo));
-        downloadBtn.buttonEl.className = 'community-pattern-download';
-        setIcon(downloadBtn.buttonEl, 'download');
-      } else {
-        if (needsUpdate) {
-          const updateBtn = new ButtonComponent(buttonContainer)
-            .setButtonText('')
-            .onClick(() => this.updatePattern(pattern.name, pattern.pattern_repo));
-          updateBtn.buttonEl.className = 'community-pattern-update';
-          setIcon(updateBtn.buttonEl, 'refresh-cw');
+        try {
+            // Check if the pattern_repo URL is valid
+        let currentPatternUrl = 'https://raw.githubusercontent.com/'+ pattern.pattern_repo + '/main/patterns/' + pattern.name + '.md';
+        const response = await fetch(currentPatternUrl);
+        if (!response.ok) {
+            console.warn(`Pattern ${pattern.name} has an invalid URL: ${currentPatternUrl}`);
+            continue; // Skip this pattern and move to the next one
         }
-        const uninstallBtn = new ButtonComponent(buttonContainer)
-          .setButtonText('')
-          .onClick(() => this.uninstallPattern(pattern.name));
-        uninstallBtn.buttonEl.className = 'community-pattern-uninstall';
-        setIcon(uninstallBtn.buttonEl, 'trash');
-      }
+
+        const patternEl = this.resultsContainer.createEl('div', { cls: 'community-pattern-item' });
+
+        const patternInfo = patternEl.createEl('div', { cls: 'community-pattern-info' });
+        patternInfo.createEl('div', { text: pattern.name, cls: 'community-pattern-title' });
+            patternInfo.createEl('div', { text: pattern.description, cls: 'community-pattern-description' });
+            patternInfo.createEl('em', {text: `by ${pattern.author}`, cls: 'community-fabric-author'});
+            patternInfo.createEl('small', { text: `For models: ${pattern.for_models}`, cls: 'community-fabric-models' });
+    
+
+        const isInstalled = await this.isPatternInstalled(pattern.name);
+        const needsUpdate = isInstalled && await this.doesPatternNeedUpdate(pattern.name, pattern.pattern_repo);
+
+        const buttonContainer = patternEl.createEl('div', { cls: 'community-pattern-buttons' });
+
+        if (!isInstalled) {
+            const downloadBtn = new ButtonComponent(buttonContainer)
+            .setButtonText('')
+            .onClick(() => this.downloadPattern(pattern.name, pattern.pattern_repo));
+            downloadBtn.buttonEl.className = 'community-pattern-download';
+            setIcon(downloadBtn.buttonEl, 'download');
+        } else {
+            if (needsUpdate) {
+            const updateBtn = new ButtonComponent(buttonContainer)
+                .setButtonText('')
+                .onClick(() => this.updatePattern(pattern.name, pattern.pattern_repo));
+            updateBtn.buttonEl.className = 'community-pattern-update';
+            setIcon(updateBtn.buttonEl, 'refresh-cw');
+            }
+            const uninstallBtn = new ButtonComponent(buttonContainer)
+            .setButtonText('')
+            .onClick(() => this.uninstallPattern(pattern.name));
+            uninstallBtn.buttonEl.className = 'community-pattern-uninstall';
+            setIcon(uninstallBtn.buttonEl, 'trash');
+        }
+        } catch (error) {
+        console.error(`Error processing pattern ${pattern.name}:`, error);
+        // Skip this pattern and move to the next one
+        }
     }
-  }
+    }
     
   async downloadPattern(patternName: string, pattern_repo: string) {
       try {
@@ -1551,6 +1575,13 @@ class CommunityPatternsModal extends Modal {
       new Notice('Failed to update pattern');
     }
   }
+    
+  async refreshPatterns() {
+    await this.fetchPatterns();
+    this.updateResults();
+    new Notice('Patterns list refreshed');
+  }
+
 
   async uninstallPattern(patternName: string) {
     try {

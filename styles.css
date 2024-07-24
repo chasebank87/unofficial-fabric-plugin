@@ -585,7 +585,6 @@
 
 .community-patterns-search {
   width: 100%;
-  max-width: 28.125rem;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 0.3125rem;
@@ -699,4 +698,24 @@
 
 .fabric-icon-button.community-patterns:hover {
   color: var(--text-on-accent);
+}
+
+.community-patterns-button-container {
+  display: flex;
+  gap: 0.5rem; /* Space between buttons */
+  margin-bottom: 1rem; /* Space below the button container */
+}
+
+.fabric-button.community-patterns-update-all,
+.fabric-button.community-patterns-refresh {
+  background-color: var(--interactive-normal);
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.fabric-button.community-patterns-update-all:hover,
+.fabric-button.community-patterns-refresh:hover {
+  color: var(--text-accent);
 }

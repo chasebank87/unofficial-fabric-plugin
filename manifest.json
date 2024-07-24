@@ -1,7 +1,7 @@
 {
   "id": "unofficial-fabric-integration",
   "name": "Unofficial Fabric Integration",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "minAppVersion": "1.6.5",
   "description": "Integrates Fabric into your vault",
   "author": "Chasebank87",
