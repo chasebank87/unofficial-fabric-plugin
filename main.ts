@@ -15,6 +15,7 @@ interface FabricPluginSettings {
     customPatternsFolder: string;
     youtubeAutodetectEnabled: boolean;
     defaultModel: string;
+    defaultPostProcessingPattern: string;
     debug: boolean;
     tavilyApiKey: string;
 }
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: FabricPluginSettings = {
     customPatternsFolder: '',
     youtubeAutodetectEnabled: true,
     defaultModel: 'gpt-4o',
+    defaultPostProcessingPattern: '',
     debug: false,
     tavilyApiKey: ''
 };
@@ -318,6 +320,7 @@ class FabricView extends ItemView {
     syncButton: HTMLElement;
     fabricConnectorApiUrl: string;
     fabricConnectorApiKey: string;
+    selectedPatterns: string[] = [];
 
     loadingMessages: string[] = [
         "reticulating splines...",
@@ -450,12 +453,31 @@ class FabricView extends ItemView {
           
       });
   
-      this.patternDropdown = contentContainer.createEl('div', { cls: 'fabric-dropdown' , attr: { id: 'pattern-dropdown' }} );
+      this.patternDropdown = contentContainer.createEl('div', { cls: 'fabric-dropdown' , attr: { id: 'pattern-dropdown', multiple: 'true' }} );
       this.modelDropdown = contentContainer.createEl('div', { cls: 'fabric-dropdown', attr: { id: 'model-dropdown' }});
   
-      this.searchInput.addEventListener('input', () => {
-          this.updatePatternOptions(this.searchInput.value.toLowerCase());
+      this.searchInput.addEventListener('blur', () => {
+        // Use setTimeout to allow click events on dropdown options to fire first
+        setTimeout(() => {
+            this.patternDropdown.empty();
+            this.selectedOptionIndex = -1;
+        }, 200);
       });
+        
+      this.searchInput.addEventListener('input', () => {
+        const inputValue = this.searchInput.value;
+        const patterns = inputValue.split(',').map(p => p.trim()).filter(p => p !== '');
+        
+        // The last item might be a partial search term, so we exclude it from selected patterns
+        const selectedPatterns = patterns.slice(0, -1);
+        const searchTerm = patterns[patterns.length - 1] || '';
+    
+        // Update selectedPatterns, ensuring no more than 5 are selected
+        this.selectedPatterns = selectedPatterns.slice(0, 5);
+    
+        // Update the dropdown options based on the search term
+        this.updatePatternOptions(searchTerm.toLowerCase());
+    });
   
       this.modelSearchInput.addEventListener('input', () => {
           this.updateModelOptions(this.modelSearchInput.value.toLowerCase());
@@ -463,8 +485,8 @@ class FabricView extends ItemView {
       });
   
       this.searchInput.addEventListener('keydown', (event) => {
-          this.handleDropdownNavigation(event, this.patternDropdown, this.searchInput);
-      });
+        this.handlePatternDropdownNavigation(event, this.patternDropdown, this.searchInput);
+    });
   
       this.modelSearchInput.addEventListener('keydown', (event) => {
           this.handleDropdownNavigation(event, this.modelDropdown, this.modelSearchInput);
@@ -638,7 +660,7 @@ class FabricView extends ItemView {
     }
     
     async runFabricWithTavilyResult(searchResult: string) {
-        const pattern = this.searchInput.value.trim();
+        const pattern = this.selectedPatterns;
         const model = this.getCurrentModel();
         let outputNoteName = this.outputNoteInput.value.trim();
     
@@ -663,7 +685,8 @@ class FabricView extends ItemView {
                 body: JSON.stringify({
                     pattern: pattern,
                     model: model,
-                    data: searchResult
+                    data: searchResult,
+                    stream: true
                 })
             });
     
@@ -684,7 +707,7 @@ class FabricView extends ItemView {
 
   async runFabric(source: 'current' | 'clipboard' | 'pattern') {
     let data = '';
-    let pattern = this.searchInput.value.trim();
+    let pattern = this.selectedPatterns;
     let outputNoteName = this.outputNoteInput.value.trim();
     const model = this.getCurrentModel();
       
@@ -722,7 +745,8 @@ class FabricView extends ItemView {
             body: JSON.stringify({
                 pattern: pattern,
                 model: model,
-                data: data
+                data: data,
+                stream: true
             })
         });
 
@@ -806,30 +830,76 @@ class FabricView extends ItemView {
         this.patternDropdown.empty();
         this.selectedOptionIndex = -1;
     
-        if (query === '') return; // Don't show options if the input is empty
+        const filteredPatterns = query 
+            ? fuzzaldrin.filter(this.patterns, query)
+            : this.patterns;
     
-        const filteredPatterns = fuzzaldrin.filter(this.patterns, query);
-    
-        if (filteredPatterns.length === 0 && query !== '') {
+        if (filteredPatterns.length === 0) {
             this.patternDropdown.createEl('div', {
                 cls: 'fabric-dropdown-option',
                 text: 'No patterns found'
             });
         } else {
             filteredPatterns.forEach((pattern, index) => {
-                const option = this.patternDropdown.createEl('div', {
-                    cls: `fabric-dropdown-option ${index === 0 ? 'selected' : ''}`,
-                    text: pattern
-                });
-                option.addEventListener('click', () => {
-                    this.searchInput.value = pattern;
-                    this.patternDropdown.empty();
-                    //this.runFabric('pattern');
-                });
+                this.addPatternOption(pattern, index);
             });
-            this.selectedOptionIndex = 0;
         }
-}
+    
+        if (this.patternDropdown.children.length > 0) {
+            this.selectedOptionIndex = 0;
+            this.updateSelectedOption(this.patternDropdown.querySelectorAll('.fabric-dropdown-option'));
+        }
+    }
+
+
+    private addPatternOption(pattern: string, index: number) {
+        const option = this.patternDropdown.createEl('div', {
+            cls: `fabric-dropdown-option ${index === 0 ? 'selected' : ''}`,
+            text: pattern
+        });
+        
+        option.addEventListener('mousedown', (event) => {
+            // Prevent the default behavior which would trigger the blur event
+            event.preventDefault();
+        });
+    
+        option.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.selectPattern(pattern);
+            // Refocus on the input after selection
+            this.searchInput.focus();
+        });
+    }
+
+    private selectPattern(pattern: string) {
+        if (this.selectedPatterns.length >= 5 && !this.selectedPatterns.includes(pattern)) {
+            new Notice('You can only select up to 5 patterns.');
+            return;
+        }
+    
+        if (!this.selectedPatterns.includes(pattern)) {
+            this.selectedPatterns.push(pattern);
+        }
+    
+        this.searchInput.value = this.selectedPatterns.join(', ') + (this.selectedPatterns.length > 0 ? ', ' : '');
+        this.updatePatternOptions('');
+        this.searchInput.focus();
+    
+        // Set cursor position to the end
+        const len = this.searchInput.value.length;
+        this.searchInput.setSelectionRange(len, len);
+    }
+
+    private updateSelectedOption(options: NodeListOf<Element>) {
+        options.forEach((option, index) => {
+            if (index === this.selectedOptionIndex) {
+                option.classList.add('selected');
+                option.scrollIntoView({ block: 'nearest' });
+            } else {
+                option.classList.remove('selected');
+            }
+        });
+    }
     
 updateModelOptions(query: string) {
     this.modelDropdown.empty();
@@ -923,7 +993,40 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
             break;
     }
 }
+    
+handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTMLInputElement) {
+    const options = dropdown.querySelectorAll('.fabric-dropdown-option');
 
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            this.selectedOptionIndex = Math.min(this.selectedOptionIndex + 1, options.length - 1);
+            this.updateSelectedOption(options);
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            this.selectedOptionIndex = Math.max(this.selectedOptionIndex - 1, 0);
+            this.updateSelectedOption(options);
+            break;
+        case 'Enter':
+            event.preventDefault();
+            if (this.selectedOptionIndex >= 0 && this.selectedOptionIndex < options.length) {
+                const selectedPattern = options[this.selectedOptionIndex].textContent;
+                if (selectedPattern) {
+                    this.selectPattern(selectedPattern);
+                    // Keep the dropdown open
+                    this.updatePatternOptions('');
+                }
+            }
+            break;
+        case 'Escape':
+            event.preventDefault();
+            dropdown.empty();
+            this.selectedOptionIndex = -1;
+            break;
+    }
+}
+    
 
     navigateDropdownOptions(direction: number, dropdown: HTMLElement) {
         const options = Array.from(dropdown.children) as HTMLElement[];
@@ -986,6 +1089,9 @@ handleDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, input: HTM
     }
 
     async handleFabricRun(source: 'current' | 'clipboard') {
+        if (this.plugin.settings.defaultPostProcessingPattern) {
+            this.selectedPatterns.push(this.plugin.settings.defaultPostProcessingPattern);
+        }
         if (this.ytToggle.classList.contains('active')) {
             const links = await this.extractYouTubeLinks(source);
             if (links.length > 0) {
@@ -1314,6 +1420,17 @@ class FabricSettingTab extends PluginSettingTab {
             .onChange(async (value) => {
             this.plugin.settings.defaultModel = value;
             await this.plugin.saveSettings();
+            }));
+        
+        new Setting(containerEl)
+        .setName('Default Post Processing Pattern')
+        .setDesc('This pattern will be appended to selected patterns when running Fabric')
+        .addText(text => text
+            .setPlaceholder('Enter pattern name')
+            .setValue(this.plugin.settings.defaultPostProcessingPattern)
+            .onChange(async (value) => {
+                this.plugin.settings.defaultPostProcessingPattern = value;
+                await this.plugin.saveSettings();
             }));
 
         new Setting(containerEl)
