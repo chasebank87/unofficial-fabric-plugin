@@ -1197,7 +1197,7 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
 
     async runYT(url: string) {
         let outputNoteName = this.outputNoteInput.value.trim();
-        const pattern = this.searchInput.value.trim();
+        const pattern = this.selectedPatterns
         const model = this.getCurrentModel();
       
         if (!model) {
@@ -1225,7 +1225,8 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
                 body: JSON.stringify({
                     pattern: pattern,
                     model: model,
-                    url: url
+                    url: url,
+                    stream: true
                 }),
             });
     
