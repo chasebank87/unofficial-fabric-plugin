@@ -345,6 +345,82 @@
   gap: 0.625rem;
 }
 
+.fabric-ts-toggle-container {
+  position: absolute;
+  top: 2.1rem;
+  left: 0.625rem;
+  display: flex;
+  align-items: center;
+}
+
+.fabric-ts-toggle {
+  position: relative;
+  width: 1.875rem;
+  height: 1.0625rem;
+  background-color: #ccc;
+  border-radius: 1.0625rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.fabric-ts-toggle.active {
+  background-color: #2196F3;
+}
+
+.fabric-ts-toggle-slider {
+  position: absolute;
+  height: 0.8125rem;
+  width: 0.8125rem;
+  left: 0.25rem;
+  bottom: 0.125rem;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.fabric-ts-toggle.active .fabric-ts-toggle-slider {
+  transform: translateX(0.625rem);
+}
+
+.fabric-ts-label {
+  margin-left: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--text-normal);
+}
+
+.fabric-ts-link-list {
+  max-height: 18.75rem;
+  overflow-y: auto;
+  margin-bottom: 0.625rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 0.25rem;
+}
+
+.fabric-ts-link {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.fabric-ts-link:last-child {
+  border-bottom: none;
+}
+
+.fabric-ts-link.is-selected {
+  background: linear-gradient(to right, #6B3FA0, #4C7FD2);
+  color: var(--text-on-accent);
+}
+
+.fabric-ts-link:hover:not(.is-selected) {
+  background-color: var(--background-modifier-hover);
+}
+
+.fabric-ts-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+}
+
 .skip-button,
 .run-button {
   padding: 0.5rem 1rem;

@@ -14,6 +14,7 @@ interface FabricPluginSettings {
     outputFolder: string;
     customPatternsFolder: string;
     youtubeAutodetectEnabled: boolean;
+    audioFileAutodetectEnabled: boolean;
     defaultModel: string;
     defaultPostProcessingPattern: string;
     debug: boolean;
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: FabricPluginSettings = {
     outputFolder: '',
     customPatternsFolder: '',
     youtubeAutodetectEnabled: true,
+    audioFileAutodetectEnabled: true,
     defaultModel: 'gpt-4o',
     defaultPostProcessingPattern: '',
     debug: false,
@@ -311,6 +313,7 @@ class FabricView extends ItemView {
     loadingText: HTMLElement;
     ytSwitch: HTMLInputElement;
     ytToggle: HTMLElement;
+    tsToggle: HTMLElement;
     modelSearchInput: HTMLInputElement;
     modelDropdown: HTMLElement;
     models: string[] = [];
@@ -406,7 +409,10 @@ class FabricView extends ItemView {
     // Add YouTube toggle and icon
     const ytToggleContainer = contentContainer.createEl('div', { cls: 'fabric-yt-toggle-container' });
         
-    // Create toggle
+    // Add YouTube toggle and icon
+    const tsToggleContainer = contentContainer.createEl('div', { cls: 'fabric-ts-toggle-container' });
+        
+    // Create toggle for yt
     this.ytToggle = ytToggleContainer.createEl('div', { 
         cls: `fabric-yt-toggle ${this.plugin.settings.youtubeAutodetectEnabled ? 'active' : ''}`
     });
@@ -415,8 +421,20 @@ class FabricView extends ItemView {
         // Create text label
         const ytLabel = ytToggleContainer.createEl('span', { 
             cls: 'fabric-yt-label',
-            text: 'Autodetect YouTube Links'
+            text: 'YouTube Links'
         });
+    
+    // Create toggle for ts
+    this.tsToggle = tsToggleContainer.createEl('div', { 
+        cls: `fabric-ts-toggle ${this.plugin.settings.audioFileAutodetectEnabled ? 'active' : ''}`
+    });
+    const toggleSliderTS = this.tsToggle.createEl('span', { cls: 'fabric-ts-toggle-slider' });
+    
+    // Create text label
+    const tsLabel = tsToggleContainer.createEl('span', { 
+        cls: 'fabric-ts-label',
+        text: 'Audio Files'
+    });
 
 
       contentContainer.createEl('h3', { text: 'fabric', cls: 'fabric-title' });
@@ -522,6 +540,17 @@ class FabricView extends ItemView {
             new Notice('YouTube link detection enabled');
         } else {
             new Notice('YouTube link detection disabled');
+        }
+      });
+        
+      this.tsToggle.addEventListener('click', () => {
+        this.tsToggle.classList.toggle('active');
+        this.plugin.settings.audioFileAutodetectEnabled = this.tsToggle.classList.contains('active');
+        this.plugin.saveSettings();
+        if (this.plugin.settings.audioFileAutodetectEnabled) {
+            new Notice('Audio file detection enabled');
+        } else {
+            new Notice('Audio file link detection disabled');
         }
     });
       
@@ -1092,17 +1121,41 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
         if (this.plugin.settings.defaultPostProcessingPattern) {
             this.selectedPatterns.push(this.plugin.settings.defaultPostProcessingPattern);
         }
-        if (this.ytToggle.classList.contains('active')) {
+        if (this.ytToggle.classList.contains('active') && this.tsToggle.classList.contains('active')) {
             const links = await this.extractYouTubeLinks(source);
+            const paths = await this.extractAudioFiles(source);
+            if (links.length > 0 && paths.length > 0) {
+                new Notice('Both YouTube links and audio files found. This is not supported yet. Try using clipboard.');
+                this.runFabric(source);
+                return;
+            }
             if (links.length > 0) {
                 this.showYouTubeModal(links, source);
+            } else if (paths.length > 0) {
+                this.showAudioModal(paths, source);
             } else {
-                new Notice('No YouTube links found. Running Fabric normally.');
+                new Notice('No YouTube links or audio files found. Running Fabric normally.');
+            this.runFabric(source);
+            }
+        } else if (this.tsToggle.classList.contains('active')) {
+            const links = await this.extractAudioFiles(source);
+            if (links.length > 0) {
+                this.showAudioModal(links, source);
+            } else {
+                new Notice('No audio files found. Running Fabric normally.');
                 this.runFabric(source);
             }
+        } else if (this.tsToggle.classList.contains('active')) {
+            const links = await this.extractAudioFiles(source);
+            if (links.length > 0) {
+                this.showAudioModal(links, source);
+            } else {
+                new Notice('No audio files found. Running Fabric normally.');
+                this.runFabric(source);
+                }
         } else {
-            this.runFabric(source);
-        }
+            this.runFabric(source);  
+          } 
     }
 
     async extractYouTubeLinks(source: 'current' | 'clipboard'): Promise<string[]> {
@@ -1117,6 +1170,20 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
         }
         const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(?:embed\/)?(?:v\/)?(?:shorts\/)?(?:\S+)/g;
         return text.match(youtubeRegex) || [];
+    }
+
+    async extractAudioFiles(source: 'current' | 'clipboard'): Promise<string[]> {
+        let text = '';
+        if (source === 'current') {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile) {
+                text = await this.app.vault.read(activeFile);
+            }
+        } else {
+            text = await navigator.clipboard.readText();
+        }
+        const audioRegex = /(?:^|[\s(])(?:\/|[a-zA-Z]:[\\/])(?:[\w\s.-]+[\\/])*[\w\s.-]+\.(?:mp3|wav|ogg|aac|flac|mp4|mkv|webm|avi|mov|flv)\b/g;
+        return text.match(audioRegex) || [];
     }
 
     showYouTubeModal(links: string[], source: 'current' | 'clipboard') {
@@ -1193,6 +1260,81 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
     
         modal.open();
     }
+
+    showAudioModal(files: string[], source: 'current' | 'clipboard') {
+        const modal = new Modal(this.app);
+        modal.titleEl.setText('Select Audio File Path');
+        const { contentEl } = modal;
+    
+        let selectedIndex = 0;
+    
+        const fileList = contentEl.createEl('div', { cls: 'fabric-ts-link-list' });
+    
+        const updateSelection = () => {
+            fileList.querySelectorAll('.fabric-ts-link').forEach((el, index) => {
+                el.classList.toggle('is-selected', index === selectedIndex);
+            });
+        };
+    
+        files.forEach((file, index) => {
+            const linkEl = fileList.createEl('div', { cls: 'fabric-ts-link', text: file });
+            linkEl.addEventListener('click', () => {
+                selectedIndex = index;
+                updateSelection();
+            });
+        });
+    
+        const buttonContainer = contentEl.createEl('div', { cls: 'fabric-ts-modal-buttons' });
+        const skipButton = buttonContainer.createEl('button', { text: 'Skip' });
+        skipButton.addClass('skip-button');
+        const runTSButton = buttonContainer.createEl('button', { text: 'Run' });
+        runTSButton.addClass('run-button');
+
+        skipButton.addEventListener('click', () => {
+            modal.close();
+            this.runTS(source);
+        });
+    
+        runTSButton.addEventListener('click', () => {
+            modal.close();
+            if (files.length > 0) {
+                this.runTS(files[selectedIndex]);
+            } else {
+                new Notice('No audio files found');
+            }
+        });
+    
+        modal.onOpen = () => {
+            updateSelection();
+            
+            const handleKeyDown = (event: KeyboardEvent) => {
+                switch (event.key) {
+                    case 'ArrowUp':
+                        selectedIndex = (selectedIndex - 1 + files.length) % files.length;
+                        updateSelection();
+                        event.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        selectedIndex = (selectedIndex + 1) % files.length;
+                        updateSelection();
+                        event.preventDefault();
+                        break;
+                    case 'Enter':
+                        modal.close();
+                        this.runTS(files[selectedIndex]);
+                        event.preventDefault();
+                        break;
+                }
+            };
+    
+            document.addEventListener('keydown', handleKeyDown);
+            modal.onClose = () => {
+                document.removeEventListener('keydown', handleKeyDown);
+            };
+        };
+    
+        modal.open();
+    }
     
 
     async runYT(url: string) {
@@ -1244,6 +1386,57 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
         } catch (error) {
             console.error('Failed to run YouTube Fabric:', error);
             new Notice('Failed to run YouTube Fabric. Please check your settings and try again.');
+        }
+    }
+
+    async runTS(path: string) {
+        let outputNoteName = this.outputNoteInput.value.trim();
+        const pattern = this.selectedPatterns
+        const model = this.getCurrentModel();
+      
+        if (!model) {
+            new Notice('Please select a model or set a default model in settings before running.');
+            return;
+        }
+        
+        if (!pattern) {
+            new Notice('Please select a pattern first');
+            return;
+        }
+
+        this.logoContainer.addClass('loading');
+        this.loadingText.setText('');
+        this.animateLoadingText(this.getRandomLoadingMessage());
+    
+        try {
+            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/ts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': this.plugin.settings.fabricConnectorApiKey
+                },
+                body: JSON.stringify({
+                    pattern: pattern,
+                    model: model,
+                    path: path,
+                    stream: true
+                }),
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            const output = data.output;
+    
+            const newFile = await this.createOutputNote(output, outputNoteName);
+            this.logoContainer.removeClass('loading');
+            this.loadingText.setText('');
+            new Notice('TS Fabric output generated successfully');
+        } catch (error) {
+            console.error('Failed to run TS Fabric:', error);
+            new Notice('Failed to run TS Fabric. Please check your settings and try again.');
         }
     }
     
