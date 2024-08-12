@@ -1145,12 +1145,12 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
                 new Notice('No audio files found. Running Fabric normally.');
                 this.runFabric(source);
             }
-        } else if (this.tsToggle.classList.contains('active')) {
-            const links = await this.extractAudioFiles(source);
+        } else if (this.ytToggle.classList.contains('active')) {
+            const links = await this.extractYouTubeLinks(source);
             if (links.length > 0) {
-                this.showAudioModal(links, source);
+                this.showYouTubeModal(links, source);
             } else {
-                new Notice('No audio files found. Running Fabric normally.');
+                new Notice('No YouTube links found. Running Fabric normally.');
                 this.runFabric(source);
                 }
         } else {
