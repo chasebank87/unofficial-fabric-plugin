@@ -18,6 +18,7 @@ interface FabricPluginSettings {
     defaultModel: string;
     defaultPostProcessingPattern: string;
     debug: boolean;
+    fabric2: boolean;
     tavilyApiKey: string;
 }
 
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS: FabricPluginSettings = {
     defaultModel: 'gpt-4o',
     defaultPostProcessingPattern: '',
     debug: false,
+    fabric2: false,
     tavilyApiKey: ''
 };
 
@@ -715,7 +717,8 @@ class FabricView extends ItemView {
                     pattern: pattern,
                     model: model,
                     data: searchResult,
-                    stream: true
+                    stream: true,
+                    goCompatibility: this.plugin.settings.fabric2
                 })
             });
     
@@ -775,7 +778,8 @@ class FabricView extends ItemView {
                 pattern: pattern,
                 model: model,
                 data: data,
-                stream: true
+                stream: true,
+                goCompatibility: this.plugin.settings.fabric2
             })
         });
 
@@ -986,12 +990,14 @@ getCurrentModel(): string {
 
 async loadModels() {
     try {
-        const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/models', {
+        const url = new URL(this.plugin.settings.fabricConnectorApiUrl + '/models');
+        url.searchParams.append('goCompatibility', this.plugin.settings.fabric2.toString());
+        const response = await fetch(url, {
             method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-API-Key': this.plugin.settings.fabricConnectorApiKey
-                },
+            }
         });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1097,7 +1103,9 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
 
     async loadPatterns() {
         try {
-            const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/patterns', {
+            const url = new URL(this.plugin.settings.fabricConnectorApiUrl + '/patterns');
+        url.searchParams.append('goCompatibility', this.plugin.settings.fabric2.toString());
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1182,7 +1190,7 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
         } else {
             text = await navigator.clipboard.readText();
         }
-        const audioRegex = /(?:^|[\s(])(?:\/|[a-zA-Z]:[\\/])(?:[\w\s.-]+[\\/])*[\w\s.-]+\.(?:mp3|wav|ogg|aac|flac|mp4|mkv|webm|avi|mov|flv)\b/g;
+        const audioRegex = /(?:^|[\s(])?(?:")?(?:\/|[a-zA-Z]:[\\/])(?:[^"\n\r]*[\\/])*[^"\n\r]*\.(?:mp3|wav|ogg|aac|flac|mp4|mkv|webm|avi|mov|flv)(?:")?(?:\s|$)/gi;
         return text.match(audioRegex) || [];
     }
 
@@ -1368,7 +1376,8 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
                     pattern: pattern,
                     model: model,
                     url: url,
-                    stream: true
+                    stream: true,
+                    goCompatibility: this.plugin.settings.fabric2
                 }),
             });
     
@@ -1419,7 +1428,8 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
                     pattern: pattern,
                     model: model,
                     path: path,
-                    stream: true
+                    stream: true,
+                    goCompatibility: this.plugin.settings.fabric2
                 }),
             });
     
@@ -1466,6 +1476,7 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
                 }
             }
         }
+        await this.loadPatterns()
     }
     
     async updatePattern(name: string, content: string) {
@@ -1485,7 +1496,7 @@ handlePatternDropdownNavigation(event: KeyboardEvent, dropdown: HTMLElement, inp
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        await this.loadPatterns()
+        
 
     
         return await response.json();
@@ -1626,6 +1637,17 @@ class FabricSettingTab extends PluginSettingTab {
                 this.plugin.settings.defaultPostProcessingPattern = value;
                 await this.plugin.saveSettings();
             }));
+        
+        new Setting(containerEl)
+        .setName('Fabric 2.0 Compatibility Mode')
+        .setDesc('Enable comptaibility mode for Fabric 2.0')
+        .addToggle(toggle => toggle
+            .setValue(this.plugin.settings.fabric2)
+            .onChange(async (value) => {
+                this.plugin.settings.fabric2 = value;
+                await this.plugin.saveSettings();
+                this.plugin.updateLogging();
+            }));
 
         new Setting(containerEl)
             .setName('Debug Mode')
@@ -1641,6 +1663,8 @@ class FabricSettingTab extends PluginSettingTab {
 
     async testFabricConnectorApiKey() {
         const fabricConnectorApiUrl = this.plugin.settings.fabricConnectorApiUrl;
+        const url = new URL(this.plugin.settings.fabricConnectorApiUrl + '/models');
+        url.searchParams.append('goCompatibility', this.plugin.settings.fabric2.toString());
         const apiKey = this.plugin.settings.fabricConnectorApiKey;
 
         if (!fabricConnectorApiUrl || !apiKey) {
@@ -1649,7 +1673,7 @@ class FabricSettingTab extends PluginSettingTab {
         }
 
         try {
-            const response = await fetch(`${fabricConnectorApiUrl}/models`, {
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
