@@ -754,10 +754,10 @@ class FabricView extends ItemView {
     if (source === 'current') {
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile) {
-            data = await this.app.vault.read(activeFile);
+            data = await this.app.vault.read(activeFile) + '\n';
         }
     } else if (source === 'clipboard') {
-        data = await navigator.clipboard.readText();
+        data = await navigator.clipboard.readText() + '\n';
     } else if (source === 'pattern') {
         if (!pattern) {
             new Notice('Please select a pattern first');
@@ -768,7 +768,6 @@ class FabricView extends ItemView {
     this.logoContainer.addClass('loading');
     this.loadingText.setText('');
     this.animateLoadingText(this.getRandomLoadingMessage());
-
     try {
         const response = await fetch(this.plugin.settings.fabricConnectorApiUrl + '/fabric', {
             method: 'POST',
