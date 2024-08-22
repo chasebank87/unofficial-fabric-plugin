@@ -679,7 +679,7 @@ class FabricView extends ItemView {
             }
     
             const data = await response.json();
-            const searchResult = JSON.stringify(data);
+            const searchResult = JSON.stringify(data) + '\n';
             await this.runFabricWithTavilyResult(searchResult);
         } catch (error) {
             console.error('Failed to perform Tavily search:', error);
