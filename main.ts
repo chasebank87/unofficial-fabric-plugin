@@ -691,6 +691,9 @@ class FabricView extends ItemView {
     }
     
     async runFabricWithTavilyResult(searchResult: string) {
+        if (this.plugin.settings.defaultPostProcessingPattern) {
+            this.selectedPatterns.push(this.plugin.settings.defaultPostProcessingPattern);
+        }
         const pattern = this.selectedPatterns;
         const model = this.getCurrentModel();
         let outputNoteName = this.outputNoteInput.value.trim();
