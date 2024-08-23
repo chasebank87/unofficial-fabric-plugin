@@ -1,7 +1,6 @@
 # Fabric Plugin for Obsidian
 
-## NOT UPDATED TO WORK WITH THE GO VERSION OF FABRIC!
-
+## Updated to work with Fabric 2.0 (Enable fabric 2.0 compatability in the plugin settings)
 If you like this plugin, feel free to support the development by buying a coffee:
 <div>
 <img src="bmc_qr.png" height=80px>
