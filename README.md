@@ -1,5 +1,7 @@
 # Fabric Plugin for Obsidian
 
+**Try out my new plugin, it accomplishes the same thing as this one without having to have fabric or fabric-connector installed. Currently its in BETA and hasnt been approved by Obsidian yet, but you can install using BRAT in the community plugin repo.  Install my plugin using https://github.com/chasebank87/mesh-ai**
+
 ## Updated to work with Fabric 2.0 (Enable fabric 2.0 compatability in the plugin settings)
 If you like this plugin, feel free to support the development by buying a coffee:
 <div>
